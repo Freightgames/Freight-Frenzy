@@ -243,54 +243,86 @@ function togglePause() {
 }
 
 function startEndlessRunnerGame() {
-    console.log("Starting endless runner game with truck:", selectedTruckType, "and trailer:", selectedTrailerType);
-    gameStarted = true;
+    console.log("Starting endless runner game with truck: " + selectedTruckType + " and trailer: " + selectedTrailerType);
+    
+    // Hide the start screen and show the UI
     document.getElementById('start-screen').style.display = 'none';
     document.getElementById('ui').style.display = 'flex';
     
-    // Remove the old truck from the scene
-    if (truck) {
-        scene.remove(truck);
-    }
-    
-    // Create a new truck with the selected options
-    truck = createTruck();
-    scene.add(truck);
-    
-    // Reset player stats
+    // Reset game variables
+    gameStarted = true;
+    inTruckstop = false;
+    isPaused = false;
     health = 100;
     fuel = 100;
     money = 0;
+    lane = 0;
+    speed = 12;
     distanceTraveled = 0;
-    
-    // Reset upgrades
+    activeSegments = [];
+    removedSegments = [];
+    removedSegmentTime = 0;
+    lastObstacleZ = 0;
+    lastPowerUpZ = 0;
+    regionIndex = 0;
+    regionProgressPercentage = 0;
+    truckStopFrequency = 2000; // Every 2000 units
+    nextTruckStopZ = -truckStopFrequency;
     hasBluetooth = false;
     hasDEFDelete = false;
-    isRefueling = false;
-    earningMultiplier = 1;
-    fuelConsumptionRate = 1;
+    fuelConsumptionRate = 1.0;
+    earningMultiplier = 1.0;
     
-    // Initialize movement variables
-    speed = baseSpeed;
-    lane = 0;
+    // Initialize mobile controls
+    addMobileControls();
+    initializeTouchControls();
+    addResponsiveStyles();
     
-    // Reset truck position
-    truck.position.set(lanePositions[lane + 1], 1, 0);
+    // Add viewport meta tag for proper mobile scaling
+    if (!document.querySelector('meta[name="viewport"]')) {
+        const viewport = document.createElement('meta');
+        viewport.name = 'viewport';
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        document.head.appendChild(viewport);
+    }
     
-    // Reset segment management
-    segments.forEach(segment => scene.remove(segment));
-    segments = [];
-    lastSegmentZ = 0;
+    // Hide game over screen
+    document.getElementById('game-over').style.display = 'none';
+    document.getElementById('truckstop-ui').style.display = 'none';
+    
+    // Create scene and camera if they don't exist yet
+    if (!scene) {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        // Add ambient light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        // Add directional light for shadows
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(0, 50, 0);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+    }
+    
+    // Create the truck if it doesn't exist yet
+    if (!truck) {
+        truck = createTruck();
+        scene.add(truck);
+    }
+    
+    // Position camera behind truck
+    camera.position.set(0, 5, 5);
+    camera.lookAt(new THREE.Vector3(0, 0, -10));
+    
+    // Initialize the first segments
     initializeSegments();
-    
-    // Reset other game state
-    inTruckstop = false;
-    isPaused = false;
-    spawnTimer = 0;
-    nextTruckStopDistance = truckStopInterval;
-    
-    // Update UI for initial values
-    updateUI();
     
     console.log("Game started successfully");
 }
@@ -3360,5 +3392,204 @@ function buyDEFDelete() {
         // Not enough money
         alert("Not enough money to buy DEF Delete!");
         console.log(`Not enough money for DEF Delete. Need $${defDeleteCost}, have $${Math.floor(money)}`);
+    }
+}
+
+// Add mobile controls
+let touchStartX = 0;
+let touchStartY = 0;
+const SWIPE_THRESHOLD = 50; // Minimum distance for a swipe
+
+// Add mobile controls to the game
+function addMobileControls() {
+    const mobileControls = document.createElement('div');
+    mobileControls.id = 'mobile-controls';
+    mobileControls.style.position = 'fixed';
+    mobileControls.style.bottom = '20px';
+    mobileControls.style.left = '0';
+    mobileControls.style.width = '100%';
+    mobileControls.style.display = 'flex';
+    mobileControls.style.justifyContent = 'space-between';
+    mobileControls.style.padding = '0 20px';
+    mobileControls.style.boxSizing = 'border-box';
+    mobileControls.style.zIndex = '1000';
+    
+    // Left lane change button
+    const leftButton = document.createElement('button');
+    leftButton.innerHTML = '←';
+    leftButton.className = 'mobile-button';
+    leftButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (lane > -1) lane--;
+    });
+    
+    // Right lane change button
+    const rightButton = document.createElement('button');
+    rightButton.innerHTML = '→';
+    rightButton.className = 'mobile-button';
+    rightButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (lane < 1) lane++;
+    });
+    
+    // Pause button
+    const pauseButton = document.createElement('button');
+    pauseButton.innerHTML = '⏸️';
+    pauseButton.className = 'mobile-button';
+    pauseButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        togglePause();
+    });
+    
+    // Add buttons to the controls container
+    mobileControls.appendChild(leftButton);
+    mobileControls.appendChild(pauseButton);
+    mobileControls.appendChild(rightButton);
+    
+    // Add the controls to the page
+    document.body.appendChild(mobileControls);
+    
+    // Add CSS styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .mobile-button {
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .mobile-button:active {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        @media (min-width: 769px) {
+            #mobile-controls {
+                display: none !important;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Add touch event listeners for swipe detection
+function initializeTouchControls() {
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, false);
+    
+    document.addEventListener('touchmove', (e) => {
+        if (!touchStartX || !touchStartY) return;
+        
+        const touchEndX = e.touches[0].clientX;
+        const touchEndY = e.touches[0].clientY;
+        
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        
+        // Only handle horizontal swipes (ignore vertical scrolling)
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
+            e.preventDefault(); // Prevent scrolling when swiping
+            if (deltaX > 0 && lane < 1) {
+                // Swipe right
+                lane++;
+            } else if (deltaX < 0 && lane > -1) {
+                // Swipe left
+                lane--;
+            }
+            
+            // Reset touch start coordinates
+            touchStartX = null;
+            touchStartY = null;
+        }
+    }, false);
+    
+    document.addEventListener('touchend', () => {
+        touchStartX = null;
+        touchStartY = null;
+    }, false);
+}
+
+// Add responsive styles for mobile UI
+function addResponsiveStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        @media (max-width: 768px) {
+            #score-container {
+                font-size: 14px !important;
+                padding: 5px !important;
+                top: 10px !important;
+            }
+            
+            #health-container, #fuel-container, #money-container {
+                margin: 2px !important;
+                padding: 3px 6px !important;
+            }
+            
+            #game-over {
+                font-size: 16px !important;
+                padding: 15px !important;
+            }
+            
+            #truckstop-ui {
+                font-size: 14px !important;
+                padding: 10px !important;
+                width: 90% !important;
+                max-width: 300px !important;
+            }
+            
+            .upgrade-button {
+                font-size: 12px !important;
+                padding: 8px !important;
+                margin: 5px !important;
+            }
+            
+            #lizard-warning {
+                font-size: 16px !important;
+                padding: 10px !important;
+            }
+            
+            .mobile-notice {
+                display: block;
+                position: fixed;
+                bottom: 90px;
+                left: 0;
+                width: 100%;
+                text-align: center;
+                color: white;
+                font-size: 14px;
+                padding: 10px;
+                background: rgba(0, 0, 0, 0.5);
+                pointer-events: none;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Add mobile instructions
+    const mobileNotice = document.createElement('div');
+    mobileNotice.className = 'mobile-notice';
+    mobileNotice.innerHTML = 'Swipe left/right or use buttons to change lanes';
+    mobileNotice.style.display = 'none';
+    document.body.appendChild(mobileNotice);
+    
+    // Only show the notice on mobile devices
+    if (window.innerWidth <= 768) {
+        mobileNotice.style.display = 'block';
+        // Hide the notice after 5 seconds
+        setTimeout(() => {
+            mobileNotice.style.opacity = '0';
+            mobileNotice.style.transition = 'opacity 1s';
+            setTimeout(() => mobileNotice.remove(), 1000);
+        }, 5000);
     }
 }
