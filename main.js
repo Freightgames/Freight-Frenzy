@@ -3265,6 +3265,55 @@ function applyPowerUp(type) {
     }
 }
 
+function displayInGameMessage(message) {
+    // Get or create the alert box container
+    let alertContainer = document.getElementById('alert-container');
+    if (!alertContainer) {
+        alertContainer = document.createElement('div');
+        alertContainer.id = 'alert-container';
+        alertContainer.style.position = 'fixed';
+        alertContainer.style.top = '20px';
+        alertContainer.style.left = '50%';
+        alertContainer.style.transform = 'translateX(-50%)';
+        alertContainer.style.zIndex = '1000';
+        alertContainer.style.display = 'flex';
+        alertContainer.style.flexDirection = 'column';
+        alertContainer.style.gap = '10px';
+        alertContainer.style.alignItems = 'center';
+        alertContainer.style.width = 'auto';
+        alertContainer.style.maxWidth = '80%';
+        document.body.appendChild(alertContainer);
+    }
+
+    // Create the message element
+    const messageDiv = document.createElement('div');
+    messageDiv.style.background = 'rgba(0,0,0,0.9)';
+    messageDiv.style.color = 'white';
+    messageDiv.style.padding = '20px';
+    messageDiv.style.borderRadius = '5px';
+    messageDiv.style.fontSize = '24px';
+    messageDiv.style.textAlign = 'center';
+    messageDiv.style.zIndex = '1001';
+    messageDiv.style.width = '100%';
+    messageDiv.style.boxSizing = 'border-box';
+    messageDiv.innerHTML = message;
+    
+    // Add the message to the container
+    alertContainer.appendChild(messageDiv);
+    
+    // Remove the message after timeout
+    setTimeout(() => {
+        if (messageDiv && messageDiv.parentNode) {
+            alertContainer.removeChild(messageDiv);
+            
+            // If no more messages, remove the container too
+            if (alertContainer.children.length === 0) {
+                document.body.removeChild(alertContainer);
+            }
+        }
+    }, 4000);
+}
+
 function applyObstacleEffect(type) {
     if (isInvincible) return;
     
@@ -3274,14 +3323,14 @@ function applyObstacleEffect(type) {
     switch (type) {
         case 'doubleBroker':
             money = Math.max(0, money - 200);
-            alert("Double broker stole your load! -$200");
+            displayInGameMessage("Double broker stole your load! -$200");
             break;
         case 'lotLizard':
             // Create a separate penalty function for the obstacle version
             // Instead of calling applyLotLizardPenalty() which is for the truck stop
             money = Math.max(0, money - 50);
             health -= 10;
-            alert("Lot lizard caused distraction! -$50 and -10 health");
+            displayInGameMessage("Lot lizard caused distraction! -$50 and -10 health");
             break;
         case 'lowBridge':
             health -= 30;
@@ -3291,7 +3340,7 @@ function applyObstacleEffect(type) {
                     speed = currentSpeed; // Return to the speed before the obstacle
                 }
             }, 5000);
-            alert("Hit low bridge! -30 health and speed reduced for 5 seconds");
+            displayInGameMessage("Hit low bridge! -30 health and speed reduced for 5 seconds");
             break;
         case 'dotOfficer':
             // Special case: If player has DEF Delete and hits DOT officer, game over!
@@ -3330,7 +3379,7 @@ function applyObstacleEffect(type) {
                         speed = currentSpeed; // Return to the speed before the obstacle
                     }
                 }, 8000);
-                alert("DOT inspection! -$100 and speed reduced for 8 seconds");
+                displayInGameMessage("DOT inspection! -$100 and speed reduced for 8 seconds");
             }
             break;
     }
@@ -3425,13 +3474,13 @@ function refuel() {
     
     // Check if already refueling
     if (isRefueling) {
-        alert("Already refueling!");
+        displayInGameMessage("Already refueling!");
         return;
     }
     
     // If fuel is already full
     if (fuel >= 95) {
-        alert("Your tank is already full!");
+        displayInGameMessage("Your tank is already full!");
         return;
     }
     
@@ -3475,7 +3524,7 @@ function refuel() {
                 }
                 
                 isRefueling = false;
-                alert("Refueling complete!");
+                displayInGameMessage("Refueling complete!");
                 console.log("Refueling complete!");
             }
         }, 500); // Add fuel every 0.5 seconds
@@ -3483,7 +3532,7 @@ function refuel() {
         console.log(`Refueling started. Paid $${refuelCost}`);
     } else {
         // Not enough money
-        alert("Not enough money to refuel!");
+        displayInGameMessage("Not enough money to refuel!");
         console.log(`Not enough money to refuel. Need $${refuelCost}, have $${Math.floor(money)}`);
     }
 }
@@ -3493,7 +3542,7 @@ function buyRollerDogs() {
     
     // Check if health is already full
     if (health >= 95) {
-        alert("Your health is already full!");
+        displayInGameMessage("Your health is already full!");
         return;
     }
     
@@ -3515,11 +3564,11 @@ function buyRollerDogs() {
         truckstopMoneyElem.textContent = Math.floor(money);
         
         // Visual feedback
-        alert(`Bought Roller Dogs! Health increased by ${healthBoost}.`);
+        displayInGameMessage(`Bought Roller Dogs! Health increased by ${healthBoost}.`);
         console.log(`Bought Roller Dogs for $${rollerDogsCost}. Health increased by ${healthBoost}.`);
     } else {
         // Not enough money
-        alert("Not enough money to buy Roller Dogs!");
+        displayInGameMessage("Not enough money to buy Roller Dogs!");
         console.log(`Not enough money for Roller Dogs. Need $${rollerDogsCost}, have $${Math.floor(money)}`);
     }
 }
@@ -3529,7 +3578,7 @@ function buyBluetooth() {
     
     // Check if already has Bluetooth
     if (hasBluetooth) {
-        alert("You already have Bluetooth installed!");
+        displayInGameMessage("You already have Bluetooth installed!");
         return;
     }
     
@@ -3560,10 +3609,10 @@ function buyBluetooth() {
         console.log(`Bought Bluetooth for $${bluetoothCost}. Earnings multiplier increased to ${earningMultiplier.toFixed(2)}.`);
         
         // Visual feedback
-        alert("Bluetooth purchased! Earnings increased by 20%");
+        displayInGameMessage("Bluetooth purchased! Earnings increased by 20%");
     } else {
         // Not enough money
-        alert("Not enough money to buy Bluetooth!");
+        displayInGameMessage("Not enough money to buy Bluetooth!");
         console.log(`Not enough money for Bluetooth. Need $${bluetoothCost}, have $${Math.floor(money)}`);
     }
 }
@@ -3573,7 +3622,7 @@ function buyDEFDelete() {
     
     // Check if already has DEF Delete
     if (hasDEFDelete) {
-        alert("You already have DEF Delete installed!");
+        displayInGameMessage("You already have DEF Delete installed!");
         return;
     }
     
@@ -3604,10 +3653,10 @@ function buyDEFDelete() {
         console.log(`Bought DEF Delete for $${defDeleteCost}. Fuel consumption rate reduced to ${fuelConsumptionRate.toFixed(2)}.`);
         
         // Visual feedback
-        alert("DEF Delete installed! Fuel consumption reduced by 25%");
+        displayInGameMessage("DEF Delete installed! Fuel consumption reduced by 25%");
     } else {
         // Not enough money
-        alert("Not enough money to buy DEF Delete!");
+        displayInGameMessage("Not enough money to buy DEF Delete!");
         console.log(`Not enough money for DEF Delete. Need $${defDeleteCost}, have $${Math.floor(money)}`);
     }
 }
