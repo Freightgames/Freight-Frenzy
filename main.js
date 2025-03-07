@@ -184,6 +184,11 @@ let lotLizardWarned = false;
 let lotLizardVisible = false;
 let lotLizard = null;
 
+// Leaderboard crashed trucks
+let leaderboardData = [];
+let placedCrashedTrucks = new Set(); // To track which distances we've already placed crashed trucks for
+let upcomingCrashedTrucks = []; // Sorted list of upcoming distances for crashed trucks
+
 // Active powerups tracking
 let activePowerups = []; // Array to track active powerups and their remaining time
 
@@ -308,58 +313,43 @@ function startEndlessRunnerGame() {
     isZapsActive = false;
     isInvincible = false;
     
+    // Reset crashed truck tracking
+    placedCrashedTrucks.clear();
+    
+    // Sort leaderboard data by distance for easy access
+    upcomingCrashedTrucks = [...leaderboardData]
+        .map(entry => entry.distance)
+        .filter(distance => distance > 100) // Filter out very short distances
+        .sort((a, b) => a - b); // Sort in ascending order
+    
+    // Add a test crashed truck at distance 200
+    // setTimeout(() => {
+    //     if (gameStarted) {
+    //         const testDistance = 85;
+    //         console.log("Adding test crashed truck at distance 200");
+            
+    //         // Create crashed truck
+    //         const crashedTruck = createCrashedTruck(testDistance, "Garrett");
+            
+    //         // Calculate position on the road
+    //         const zPosition = truck.position.z - ((testDistance - distanceTraveled) * 1);
+    //         crashedTruck.position.z = zPosition;
+            
+    //         // Add to scene
+    //         scene.add(crashedTruck);
+            
+    //         // Mark as placed so we don't add it again from leaderboard data
+    //         placedCrashedTrucks.add(testDistance);
+    //     }
+    // }, 3000); // Wait 3 seconds before adding test truck to ensure game is fully loaded
+    
     // Initialize mobile controls
     addMobileControls();
     initializeTouchControls();
     addResponsiveStyles();
-    
-    // Add viewport meta tag for proper mobile scaling
-    if (!document.querySelector('meta[name="viewport"]')) {
-        const viewport = document.createElement('meta');
-        viewport.name = 'viewport';
-        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-        document.head.appendChild(viewport);
-    }
-    
-    // Hide game over screen
-    document.getElementById('game-over').style.display = 'none';
-    document.getElementById('truckstop-ui').style.display = 'none';
-    
-    // Create scene and camera if they don't exist yet
-    if (!scene) {
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        document.body.appendChild(renderer.domElement);
-        
-        // Add ambient light
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
-        
-        // Add directional light for shadows
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(0, 50, 0);
-        directionalLight.castShadow = true;
-        scene.add(directionalLight);
-    }
-    
-    // Create the truck if it doesn't exist yet
-    if (!truck) {
-        truck = createTruck();
-        scene.add(truck);
-    }
-    
-    // Position camera behind truck
-    camera.position.set(0, 5, 5);
-    camera.lookAt(new THREE.Vector3(0, 0, -10));
-    
-    // Initialize the first segments
-    initializeSegments();
-    
-    console.log("Game started successfully");
+
+    // Start the game
+    animate();
 }
 
 function setDifficulty(level) {
@@ -580,6 +570,9 @@ function gameOver() {
             const leaderboardRef = ref(window.firebaseDatabase, 'leaderboard');
             push(leaderboardRef, scoreData);
             console.log("Score saved to leaderboard!");
+            
+            // Refresh leaderboard data after adding new score
+            fetchLeaderboardData();
         } catch (error) {
             console.error("Error saving score:", error);
         }
@@ -1222,10 +1215,55 @@ function endlessRunnerLoop() {
             lastSegmentZ = newZ;
         }
         
+        // Check for upcoming crashed trucks from leaderboard
+        while (upcomingCrashedTrucks.length > 0 && 
+               upcomingCrashedTrucks[0] <= distanceTraveled + 500 && // Look ahead 500 units
+               !placedCrashedTrucks.has(upcomingCrashedTrucks[0])) {
+            
+            const distance = upcomingCrashedTrucks.shift();
+            
+            // Find the entry with this distance
+            const entry = leaderboardData.find(e => e.distance === distance);
+            if (entry) {
+                // Create crashed truck at this distance
+                const crashedTruck = createCrashedTruck(distance, entry.playerName);
+                
+                // Calculate position on the road
+                // Add a slight random offset to avoid all trucks appearing at exact milestone positions
+                const randomZOffset = (Math.random() - 0.5) * 5; // ±2.5 units of random variation
+                const zPosition = truck.position.z - ((distance - distanceTraveled) * 1) + randomZOffset;
+                
+                // Position the crashed truck at the calculated Z position
+                // The X position (off to the side of the road) is handled in createCrashedTruck
+                crashedTruck.position.z = zPosition;
+                
+                // Add slight random rotation for more natural look
+                crashedTruck.rotation.y += (Math.random() - 0.5) * 0.2;
+                
+                // Add to scene
+                scene.add(crashedTruck);
+                
+                // Mark as placed
+                placedCrashedTrucks.add(distance);
+                
+                console.log(`Placed crashed truck for ${entry.playerName} at distance ${distance}m (z=${zPosition})`);
+            }
+        }
+        
         // Remove segments that are too far behind
         while (segments.length > 0 && segments[0].userData.z > truck.position.z + segmentLength * 3) {
             scene.remove(segments.shift());
         }
+        
+        // Remove crashed trucks that are too far behind
+        scene.children.forEach(object => {
+            if (object.userData && object.userData.isCrashedLeaderboardTruck) {
+                // Only remove if it's well behind the player to avoid pop-in/pop-out effects
+                if (object.position.z > truck.position.z + 150) {
+                    scene.remove(object);
+                }
+            }
+        });
         
         // Spawn obstacles and power-ups
         spawnTimer += speed * delta;
@@ -1263,6 +1301,25 @@ function endlessRunnerLoop() {
     }
     
     if (inTruckstop) animateLotLizard();
+    
+    // Update visibility of text labels on crashed trucks based on distance to player
+    scene.children.forEach(object => {
+        if (object.userData && object.userData.isCrashedLeaderboardTruck) {
+            // Calculate distance to the player truck
+            const distanceToPlayer = Math.abs(object.position.z - truck.position.z);
+            
+            // Find the text group (which contains the sprite)
+            const textGroup = object.children.find(child => child.type === 'Group' && child.position.y > 5);
+            
+            if (textGroup) {
+                // Only show text when player is relatively close (within 150 units)
+                textGroup.visible = distanceToPlayer < 150;
+                
+                // Update the sprite's rotation to always face the camera
+                textGroup.lookAt(camera.position);
+            }
+        }
+    });
 }
 
 // Animation loop
@@ -1300,6 +1357,22 @@ try {
     console.error("Error during game initialization:", error);
     alert("Error starting game: " + error.message);
 }
+
+// Initialize everything when the window loads
+window.addEventListener('load', function() {
+    // Fetch leaderboard data when the game loads
+    if (window.firebaseRefs) {
+        fetchLeaderboardData();
+    } else {
+        // If Firebase is not initialized yet, wait for it
+        const firebaseCheckInterval = setInterval(() => {
+            if (window.firebaseRefs) {
+                fetchLeaderboardData();
+                clearInterval(firebaseCheckInterval);
+            }
+        }, 500);
+    }
+});
 
 // Helper functions
 function createTruck() {
@@ -4262,4 +4335,224 @@ function addResponsiveStyles() {
             setTimeout(() => mobileNotice.remove(), 1000);
         }, 5000);
     }
+}
+
+// Function to fetch leaderboard data
+function fetchLeaderboardData() {
+    if (!window.firebaseRefs) {
+        console.error("Firebase references not available");
+        return;
+    }
+    
+    const { ref } = window.firebaseRefs;
+    const leaderboardRef = ref(window.firebaseDatabase, 'leaderboard');
+    
+    // Check if we're using the game page Firebase references or leaderboard page references
+    if (window.firebaseRefs.onValue) {
+        // If onValue is available (like in leaderboard.html), use it
+        window.firebaseRefs.onValue(leaderboardRef, processLeaderboardData, { onlyOnce: true });
+    } else {
+        // If onValue is not available (like in index.html), use a one-time fetch technique
+        console.log("Using alternative method to fetch leaderboard data");
+        
+        // Use the Firebase REST API to get the data once
+        // Try to get the database URL from firebaseConfig if available
+        let dbUrl = 'https://freight-frenzy-default-rtdb.firebaseio.com/leaderboard.json';
+        
+        // If we have a databaseURL in the config, use that instead
+        if (window.firebaseConfig && window.firebaseConfig.databaseURL) {
+            dbUrl = `${window.firebaseConfig.databaseURL}/leaderboard.json`;
+        }
+        
+        fetch(dbUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (data) {
+                    processLeaderboardSnapshot({ 
+                        exists: () => true,
+                        forEach: callback => {
+                            Object.keys(data).forEach(key => {
+                                callback({
+                                    val: () => data[key]
+                                });
+                            });
+                        }
+                    });
+                } else {
+                    console.log("No leaderboard entries found");
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching leaderboard data:", error);
+            });
+    }
+}
+
+// Separate function to process leaderboard data
+function processLeaderboardData(snapshot) {
+    processLeaderboardSnapshot(snapshot);
+}
+
+// Function to process the leaderboard snapshot regardless of how it was retrieved
+function processLeaderboardSnapshot(snapshot) {
+    leaderboardData = [];
+    
+    if (snapshot.exists()) {
+        snapshot.forEach((childSnapshot) => {
+            const score = childSnapshot.val();
+            leaderboardData.push(score);
+        });
+        
+        console.log(`Loaded ${leaderboardData.length} leaderboard entries`);
+        
+        // If the game is already started, update the upcoming crashed trucks
+        if (gameStarted) {
+            upcomingCrashedTrucks = [...leaderboardData]
+                .map(entry => entry.distance)
+                .filter(distance => distance > distanceTraveled) // Only future distances
+                .sort((a, b) => a - b); // Sort in ascending order
+        }
+    } else {
+        console.log("No leaderboard entries found");
+    }
+}
+
+// Function to create a crashed truck at a specific distance
+function createCrashedTruck(distance, playerName) {
+    // Create a group for the crashed truck
+    const crashedTruckGroup = new THREE.Group();
+    
+    // Create the crashed truck using the same function that creates player trucks
+    // but we'll modify it to look crashed
+    const crashedTruck = createTruck();
+    
+    // Apply damage/crash effects:
+    // 1. Tilt the truck (as if it crashed off the road) - using more subtle angles
+    crashedTruck.rotation.z = (Math.random() - 0.5) * 0.3; // Less extreme tilt
+    crashedTruck.rotation.y = Math.PI / 4 * (Math.random() > 0.5 ? 1 : -1); // Turn toward or away from road
+    
+    // 2. Always position to the side of the road (not on it)
+    // Randomly choose left or right side, but with more distance from center
+    const side = Math.random() > 0.5 ? -1 : 1;
+    const offsetX = side * (15 + Math.random() * 5); // 15-20 units from center - well off the road
+    
+    // 3. Add some vertical offset (as if it's partially in a ditch)
+    crashedTruck.position.y = -0.5 - Math.random() * 0.8; // Less extreme sinking
+    
+    // 4. Scale down the truck slightly to indicate distance perspective
+    crashedTruck.scale.set(0.9, 0.9, 0.9);
+    
+    // Add the truck to the group
+    crashedTruckGroup.add(crashedTruck);
+    
+    // Set the group's X position here (not the individual truck)
+    // This way all children (including the truck) inherit this position
+    crashedTruckGroup.position.x = offsetX;
+    
+    // Create a simple text sprite for the player name and distance
+    // This avoids the 3D font loading which can cause issues
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const context = canvas.getContext('2d');
+    
+    // Make the background fully transparent
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw text with a slight shadow for readability
+    context.font = 'Bold 36px Arial';
+    context.textAlign = 'center';
+    context.fillStyle = '#FFFF00';
+    context.strokeStyle = '#000000';
+    context.lineWidth = 3;
+    context.strokeText(playerName, 256, 50);
+    context.fillText(playerName, 256, 50);
+    
+    context.font = 'Bold 32px Arial';
+    context.strokeText(`${distance}m`, 256, 90);
+    context.fillText(`${distance}m`, 256, 90);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    
+    const spriteMaterial = new THREE.SpriteMaterial({ 
+        map: texture,
+        transparent: true,
+        alphaTest: 0.1,
+        sizeAttenuation: true // Enable size attenuation so it scales with distance
+    });
+    
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(20, 7, 1); // 300% larger for better visibility
+    
+    // Create a separate group for the text that always faces the camera
+    const textGroup = new THREE.Group();
+    textGroup.position.set(0, 6, 0); // Position high above the crashed truck
+    textGroup.add(sprite);
+    
+    // Add the text group to the main group
+    crashedTruckGroup.add(textGroup);
+    
+    // Add subtle smoke/debris particles for effect (fewer particles, less movement)
+    const particleCount = 10; // Reduced from 20
+    const particleGeometry = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    
+    for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        particlePositions[i3] = (Math.random() - 0.5) * 2; // x - smaller spread
+        particlePositions[i3 + 1] = Math.random() * 1.5; // y - lower height
+        particlePositions[i3 + 2] = (Math.random() - 0.5) * 2; // z - smaller spread
+    }
+    
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    
+    const particleMaterial = new THREE.PointsMaterial({
+        color: 0x888888,
+        size: 0.15, // Smaller particles
+        transparent: true,
+        opacity: 0.5 // More subtle
+    });
+    
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    
+    // Position particles near the truck
+    particles.position.set(0, 1, 0);
+    crashedTruck.add(particles);
+    
+    // Animate the smoke particles - more subtle movement
+    const animateSmoke = function() {
+        if (!particles.parent) return; // Stop if removed from scene
+        
+        const positions = particles.geometry.attributes.position.array;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const i3 = i * 3;
+            // Move particle up slowly
+            positions[i3 + 1] += 0.005; // Slower rise
+            
+            // Reset particle if it goes too high
+            if (positions[i3 + 1] > 2) {
+                positions[i3 + 1] = 0;
+            }
+            
+            // Very slight random movement
+            positions[i3] += (Math.random() - 0.5) * 0.01; // Reduced jitter
+            positions[i3 + 2] += (Math.random() - 0.5) * 0.01; // Reduced jitter
+        }
+        
+        particles.geometry.attributes.position.needsUpdate = true;
+        requestAnimationFrame(animateSmoke);
+    };
+    
+    animateSmoke();
+    
+    // Add tag to identify this as a crashed leaderboard truck
+    crashedTruckGroup.userData = {
+        isCrashedLeaderboardTruck: true,
+        distance: distance,
+        playerName: playerName
+    };
+    
+    return crashedTruckGroup;
 }

@@ -37,6 +37,9 @@
   window.firebaseApp = app;
   window.firebaseDatabase = database;
   window.firebaseRefs = { ref, set, push, serverTimestamp };
+
+  // Make Firebase config available globally
+  window.firebaseConfig = firebaseConfig;
 </script>
 <head>
     <meta charset="UTF-8">
