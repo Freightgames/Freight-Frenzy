@@ -398,8 +398,6 @@ function updateActivePowerupsUI() {
         powerupsContainer.id = 'powerups-container';
         powerupsContainer.className = 'stat';
         powerupsContainer.style.position = 'fixed';
-        powerupsContainer.style.top = '20px';
-        powerupsContainer.style.right = '20px';
         powerupsContainer.style.display = 'flex';
         powerupsContainer.style.flexDirection = 'column';
         powerupsContainer.style.gap = '5px';
@@ -407,6 +405,16 @@ function updateActivePowerupsUI() {
         powerupsContainer.style.padding = '10px';
         powerupsContainer.style.borderRadius = '10px';
         powerupsContainer.style.zIndex = '100';
+
+        if(window.innerWidth <= 768) {
+            powerupsContainer.style.top = window.innerHeight - 100;
+            console.log(window.innerHeight-100);
+        } else {
+            powerupsContainer.style.top = '20px';
+        }
+
+        powerupsContainer.style.right = '20px';
+
         document.body.appendChild(powerupsContainer);
     }
     
@@ -4296,7 +4304,7 @@ function addResponsiveStyles() {
             #powerups-container {
                 font-size: 12px !important;
                 padding: 8px !important;
-                top: 10px !important;
+                top: 105px !important;
                 right: 10px !important;
                 max-width: 150px !important;
             }
