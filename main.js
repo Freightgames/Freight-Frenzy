@@ -243,9 +243,11 @@ document.addEventListener('keydown', (event) => {
 function togglePause() {
     isPaused = !isPaused;
     if (isPaused) {
+        clock.stop();
         document.getElementById('ui').insertAdjacentHTML('beforeend',
             '<div id="pause-message" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.7);padding:20px;border-radius:5px;color:white;font-size:24px;z-index:1000;">PAUSED - Press P to resume</div>');
     } else {
+        clock.start();
         const pauseMsg = document.getElementById('pause-message');
         if (pauseMsg) pauseMsg.remove();
     }
