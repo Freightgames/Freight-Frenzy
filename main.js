@@ -377,7 +377,8 @@ function gameOver() {
 function shareScore() {
     const score = Math.floor(distanceTraveled);
     const message = `I just scored ${score}m in Freight Frenzy! #FreightFrenzy`;
-    alert(`Share this message: ${message}`);
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+    window.open(twitterUrl, '_blank');
 }
 
 function reviewAds() {
