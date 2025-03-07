@@ -1709,7 +1709,11 @@ function createHighwaySegment(zPosition) {
     const segmentDistanceFromStart = Math.abs(zPosition);
     
     // Place billboards every 200 units of distance
-    if (segmentDistanceFromStart % 200 < segmentLength) {
+    // Fix for double stacking: Use a more precise condition to ensure billboards
+    // are only placed once
+    if (segmentDistanceFromStart % 200 < segmentLength && 
+        segmentDistanceFromStart % 200 >= 0 && 
+        segmentDistanceFromStart % 200 < 0.5) {
         // Calculate the exact z position to place the billboard in this segment
         const billboardZ = zPosition + (segmentDistanceFromStart % 200);
         
@@ -1720,7 +1724,10 @@ function createHighwaySegment(zPosition) {
     
     // Right side billboards (on a different interval to alternate sides)
     // Place every 200 units but offset by 100 from left side
-    if ((segmentDistanceFromStart + 100) % 200 < segmentLength) {
+    // Fix for double stacking: Use a more precise condition
+    if ((segmentDistanceFromStart + 100) % 200 < segmentLength && 
+        (segmentDistanceFromStart + 100) % 200 >= 0 && 
+        (segmentDistanceFromStart + 100) % 200 < 0.5) {
         const rightBillboardZ = zPosition + ((segmentDistanceFromStart + 100) % 200);
         const rightBillboardX = 20 + Math.random() * 5;
         segment.add(createBillboard(rightBillboardX, rightBillboardZ, false)); // false = right side
@@ -3112,7 +3119,7 @@ function createObstacle(type, zPosition) {
 
 function initializeSegments() {
     scene.background = new THREE.Color(regions[regionIndex].skyColor);
-    for (let i = 0; i < visibleSegments; i++) {
+    for (let i = 0; i < 2; i++) {
         const zPos = -i * segmentLength;
         const segment = createHighwaySegment(zPos);
         scene.add(segment);
