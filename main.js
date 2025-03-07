@@ -513,6 +513,13 @@ function clearAllActivePowerups() {
             truck.remove(powerup.effect);
         }
         
+        // Clear associated timeouts and intervals
+        if (activePowerupTimeouts[powerup.id]) {
+            clearTimeout(activePowerupTimeouts[powerup.id].timeout);
+            clearInterval(activePowerupTimeouts[powerup.id].interval);
+            delete activePowerupTimeouts[powerup.id];
+        }
+        
         // Reset any global flags based on powerup type
         switch (powerup.type) {
             case 'zaps':
@@ -527,6 +534,9 @@ function clearAllActivePowerups() {
     
     // Clear the array
     activePowerups = [];
+    
+    // Reset the timeouts object
+    activePowerupTimeouts = {};
     
     // Update the UI
     updateActivePowerupsUI();
@@ -3351,133 +3361,287 @@ function initializeSegments() {
     }
 }
 
+// Add a property to store active timeouts and intervals with powerups
+let activePowerupTimeouts = {};
+
 function applyPowerUp(type) {
     switch (type) {
         case 'zaps':
-            isZapsActive = true;
-            isInvincible = true;
+            // Check if ZAPS is already active
+            const existingZapsIndex = activePowerups.findIndex(p => p.type === 'zaps');
             
-            // Increase earnings while active
-            const oldEarningMultiplier = earningMultiplier;
-            earningMultiplier = earningMultiplier * 1.5;
-            
-            // Create visual effect for invincibility
-            const auraEffect = createInvincibilityAura();
-            truck.add(auraEffect);
-            
-            console.log("ZAPS activated! Player is invincible and earning 1.5x for 15 seconds");
-            
-            // Create a unique ID for this powerup instance
-            const zapsId = Date.now() + Math.random();
-            
-            // Add to active powerups
-            const zapsPowerup = {
-                id: zapsId,
-                type: 'zaps',
-                startTime: Date.now(),
-                duration: 15000,
-                remainingTime: 15000,
-                effect: auraEffect
-            };
-            activePowerups.push(zapsPowerup);
-            
-            // Update the powerups UI
-            updateActivePowerupsUI();
-            
-            // Set an interval to update the remaining time
-            const zapsInterval = setInterval(() => {
-                // Find this powerup in the active list
-                const index = activePowerups.findIndex(p => p.id === zapsId);
-                if (index !== -1) {
-                    // Update remaining time
-                    const elapsed = Date.now() - activePowerups[index].startTime;
-                    activePowerups[index].remainingTime = Math.max(0, activePowerups[index].duration - elapsed);
-                    
-                    // Update the UI
-                    updateActivePowerupsUI();
-                }
-            }, 1000);
-            
-            // Set a timeout to disable the effect after 15 seconds
-            setTimeout(() => {
-                isZapsActive = false;
-                isInvincible = false;
-                earningMultiplier = oldEarningMultiplier;
-                truck.remove(auraEffect);
-                console.log("ZAPS effect ended!");
+            if (existingZapsIndex !== -1) {
+                // ZAPS already active, reset the timer
+                console.log("ZAPS refreshed! Timer reset to 15 seconds");
                 
-                // Remove from active powerups
-                const index = activePowerups.findIndex(p => p.id === zapsId);
-                if (index !== -1) {
-                    activePowerups.splice(index, 1);
+                // Get the existing powerup and its ID
+                const existingZaps = activePowerups[existingZapsIndex];
+                const zapsId = existingZaps.id;
+                
+                // Clear existing timeout and interval
+                if (activePowerupTimeouts[zapsId]) {
+                    clearTimeout(activePowerupTimeouts[zapsId].timeout);
+                    clearInterval(activePowerupTimeouts[zapsId].interval);
                 }
                 
-                // Clear the interval
-                clearInterval(zapsInterval);
+                // Reset the start time and remaining time
+                existingZaps.startTime = Date.now();
+                existingZaps.remainingTime = 15000;
                 
-                // Update the UI
-                updateActivePowerupsUI();
-            }, 15000);
-            break;
-            
-        case 'energy':
-            // Energy now speeds up the truck
-            console.log("Energy drink consumed! Speed boost activated!");
-            
-            // Store current speed for restoration later
-            const currentSpeed = speed;
-            // Boost speed by 50%
-            speed = Math.min(currentSpeed * 1.5, baseSpeed * maxSpeedMultiplier);
-            
-            // Create a unique ID for this powerup instance
-            const energyId = Date.now() + Math.random();
-            
-            // Add to active powerups
-            const energyPowerup = {
-                id: energyId,
-                type: 'energy',
-                startTime: Date.now(),
-                duration: 12000,
-                remainingTime: 12000
-            };
-            activePowerups.push(energyPowerup);
-            
-            // Update the powerups UI
-            updateActivePowerupsUI();
-            
-            // Set an interval to update the remaining time
-            const energyInterval = setInterval(() => {
-                // Find this powerup in the active list
-                const index = activePowerups.findIndex(p => p.id === energyId);
-                if (index !== -1) {
-                    // Update remaining time
-                    const elapsed = Date.now() - activePowerups[index].startTime;
-                    activePowerups[index].remainingTime = Math.max(0, activePowerups[index].duration - elapsed);
-                    
-                    // Update the UI
-                    updateActivePowerupsUI();
-                }
-            }, 1000);
-            
-            // Set a timeout to return to normal speed after 12 seconds
-            setTimeout(() => {
-                if (gameStarted && !inTruckstop) {
-                    speed = currentSpeed; // Return to the speed before the power-up
-                    console.log("Energy speed boost ended!");
+                // Set a new interval to update the remaining time
+                const newZapsInterval = setInterval(() => {
+                    // Find this powerup in the active list
+                    const index = activePowerups.findIndex(p => p.id === zapsId);
+                    if (index !== -1) {
+                        // Update remaining time
+                        const elapsed = Date.now() - activePowerups[index].startTime;
+                        activePowerups[index].remainingTime = Math.max(0, activePowerups[index].duration - elapsed);
+                        
+                        // Update the UI
+                        updateActivePowerupsUI();
+                    }
+                }, 1000);
+                
+                // Set a new timeout to disable the effect after 15 seconds
+                const newZapsTimeout = setTimeout(() => {
+                    isZapsActive = false;
+                    isInvincible = false;
+                    earningMultiplier = earningMultiplier / 1.5; // Restore original multiplier
+                    truck.remove(existingZaps.effect);
+                    console.log("ZAPS effect ended!");
                     
                     // Remove from active powerups
-                    const index = activePowerups.findIndex(p => p.id === energyId);
+                    const index = activePowerups.findIndex(p => p.id === zapsId);
                     if (index !== -1) {
                         activePowerups.splice(index, 1);
                     }
                     
-                    // Clear the interval
-                    clearInterval(energyInterval);
+                    // Clear the interval and remove from active timeouts
+                    clearInterval(newZapsInterval);
+                    delete activePowerupTimeouts[zapsId];
                     
                     // Update the UI
                     updateActivePowerupsUI();
+                }, 15000);
+                
+                // Store the new interval and timeout
+                activePowerupTimeouts[zapsId] = {
+                    interval: newZapsInterval,
+                    timeout: newZapsTimeout
+                };
+                
+                // Update the UI
+                updateActivePowerupsUI();
+            } else {
+                // New ZAPS powerup
+                isZapsActive = true;
+                isInvincible = true;
+                
+                // Increase earnings while active
+                const oldEarningMultiplier = earningMultiplier;
+                earningMultiplier = earningMultiplier * 1.5;
+                
+                // Create visual effect for invincibility
+                const auraEffect = createInvincibilityAura();
+                truck.add(auraEffect);
+                
+                console.log("ZAPS activated! Player is invincible and earning 1.5x for 15 seconds");
+                
+                // Create a unique ID for this powerup instance
+                const zapsId = Date.now() + Math.random();
+                
+                // Add to active powerups
+                const zapsPowerup = {
+                    id: zapsId,
+                    type: 'zaps',
+                    startTime: Date.now(),
+                    duration: 15000,
+                    remainingTime: 15000,
+                    effect: auraEffect
+                };
+                activePowerups.push(zapsPowerup);
+                
+                // Update the powerups UI
+                updateActivePowerupsUI();
+                
+                // Set an interval to update the remaining time
+                const zapsInterval = setInterval(() => {
+                    // Find this powerup in the active list
+                    const index = activePowerups.findIndex(p => p.id === zapsId);
+                    if (index !== -1) {
+                        // Update remaining time
+                        const elapsed = Date.now() - activePowerups[index].startTime;
+                        activePowerups[index].remainingTime = Math.max(0, activePowerups[index].duration - elapsed);
+                        
+                        // Update the UI
+                        updateActivePowerupsUI();
+                    }
+                }, 1000);
+                
+                // Set a timeout to disable the effect after 15 seconds
+                const zapsTimeout = setTimeout(() => {
+                    isZapsActive = false;
+                    isInvincible = false;
+                    earningMultiplier = oldEarningMultiplier;
+                    truck.remove(auraEffect);
+                    console.log("ZAPS effect ended!");
+                    
+                    // Remove from active powerups
+                    const index = activePowerups.findIndex(p => p.id === zapsId);
+                    if (index !== -1) {
+                        activePowerups.splice(index, 1);
+                    }
+                    
+                    // Clear the interval and remove from active timeouts
+                    clearInterval(zapsInterval);
+                    delete activePowerupTimeouts[zapsId];
+                    
+                    // Update the UI
+                    updateActivePowerupsUI();
+                }, 15000);
+                
+                // Store the interval and timeout
+                activePowerupTimeouts[zapsId] = {
+                    interval: zapsInterval,
+                    timeout: zapsTimeout
+                };
+            }
+            break;
+            
+        case 'energy':
+            // Check if Energy is already active
+            const existingEnergyIndex = activePowerups.findIndex(p => p.type === 'energy');
+            
+            if (existingEnergyIndex !== -1) {
+                // Energy already active, reset the timer
+                console.log("Energy refreshed! Timer reset to 12 seconds");
+                
+                // Get the existing powerup and its ID
+                const existingEnergy = activePowerups[existingEnergyIndex];
+                const energyId = existingEnergy.id;
+                
+                // Clear existing timeout and interval
+                if (activePowerupTimeouts[energyId]) {
+                    clearTimeout(activePowerupTimeouts[energyId].timeout);
+                    clearInterval(activePowerupTimeouts[energyId].interval);
                 }
-            }, 12000);
+                
+                // Reset the start time and remaining time
+                existingEnergy.startTime = Date.now();
+                existingEnergy.remainingTime = 12000;
+                
+                // Store current speed in case it changed
+                const currentSpeed = speed;
+                
+                // Set a new interval to update the remaining time
+                const newEnergyInterval = setInterval(() => {
+                    // Find this powerup in the active list
+                    const index = activePowerups.findIndex(p => p.id === energyId);
+                    if (index !== -1) {
+                        // Update remaining time
+                        const elapsed = Date.now() - activePowerups[index].startTime;
+                        activePowerups[index].remainingTime = Math.max(0, activePowerups[index].duration - elapsed);
+                        
+                        // Update the UI
+                        updateActivePowerupsUI();
+                    }
+                }, 1000);
+                
+                // Set a new timeout to disable the effect after 12 seconds
+                const newEnergyTimeout = setTimeout(() => {
+                    if (gameStarted && !inTruckstop) {
+                        speed = currentSpeed / 1.5; // Return to the speed before the power-up
+                        console.log("Energy speed boost ended!");
+                        
+                        // Remove from active powerups
+                        const index = activePowerups.findIndex(p => p.id === energyId);
+                        if (index !== -1) {
+                            activePowerups.splice(index, 1);
+                        }
+                        
+                        // Clear the interval and remove from active timeouts
+                        clearInterval(newEnergyInterval);
+                        delete activePowerupTimeouts[energyId];
+                        
+                        // Update the UI
+                        updateActivePowerupsUI();
+                    }
+                }, 12000);
+                
+                // Store the new interval and timeout
+                activePowerupTimeouts[energyId] = {
+                    interval: newEnergyInterval,
+                    timeout: newEnergyTimeout
+                };
+                
+                // Update the UI
+                updateActivePowerupsUI();
+            } else {
+                // Energy now speeds up the truck
+                console.log("Energy drink consumed! Speed boost activated!");
+                
+                // Store current speed for restoration later
+                const currentSpeed = speed;
+                // Boost speed by 50%
+                speed = Math.min(currentSpeed * 1.5, baseSpeed * maxSpeedMultiplier);
+                
+                // Create a unique ID for this powerup instance
+                const energyId = Date.now() + Math.random();
+                
+                // Add to active powerups
+                const energyPowerup = {
+                    id: energyId,
+                    type: 'energy',
+                    startTime: Date.now(),
+                    duration: 12000,
+                    remainingTime: 12000
+                };
+                activePowerups.push(energyPowerup);
+                
+                // Update the powerups UI
+                updateActivePowerupsUI();
+                
+                // Set an interval to update the remaining time
+                const energyInterval = setInterval(() => {
+                    // Find this powerup in the active list
+                    const index = activePowerups.findIndex(p => p.id === energyId);
+                    if (index !== -1) {
+                        // Update remaining time
+                        const elapsed = Date.now() - activePowerups[index].startTime;
+                        activePowerups[index].remainingTime = Math.max(0, activePowerups[index].duration - elapsed);
+                        
+                        // Update the UI
+                        updateActivePowerupsUI();
+                    }
+                }, 1000);
+                
+                // Set a timeout to return to normal speed after 12 seconds
+                const energyTimeout = setTimeout(() => {
+                    if (gameStarted && !inTruckstop) {
+                        speed = currentSpeed; // Return to the speed before the power-up
+                        console.log("Energy speed boost ended!");
+                        
+                        // Remove from active powerups
+                        const index = activePowerups.findIndex(p => p.id === energyId);
+                        if (index !== -1) {
+                            activePowerups.splice(index, 1);
+                        }
+                        
+                        // Clear the interval and remove from active timeouts
+                        clearInterval(energyInterval);
+                        delete activePowerupTimeouts[energyId];
+                        
+                        // Update the UI
+                        updateActivePowerupsUI();
+                    }
+                }, 12000);
+                
+                // Store the interval and timeout
+                activePowerupTimeouts[energyId] = {
+                    interval: energyInterval,
+                    timeout: energyTimeout
+                };
+            }
             break;
             
         case 'wrench':
