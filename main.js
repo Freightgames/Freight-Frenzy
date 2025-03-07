@@ -184,6 +184,9 @@ let lotLizardWarned = false;
 let lotLizardVisible = false;
 let lotLizard = null;
 
+// Active powerups tracking
+let activePowerups = []; // Array to track active powerups and their remaining time
+
 // Upgrade tracking
 let hasBluetooth = false;
 let hasDEFDelete = false;
@@ -262,7 +265,7 @@ function startEndlessRunnerGame() {
     // Default to a random trucker handle if left blank
     if (!playerName) {
         const randomHandles = ['RoadDog', 'BigRigBoss', 'GearJammer', 'DieselDave', 'HighwayHero', 
-                              'AsphaltCowboy', 'MileMarker', 'RubberDuck', 'NightRider', 'SmokeEater'];
+                             'AsphaltCowboy', 'MileMarker', 'RubberDuck', 'NightRider', 'SmokeEater'];
         playerName = randomHandles[Math.floor(Math.random() * randomHandles.length)] + 
                      Math.floor(Math.random() * 99 + 1);
     }
@@ -299,6 +302,11 @@ function startEndlessRunnerGame() {
     hasDEFDelete = false;
     fuelConsumptionRate = 1.0;
     earningMultiplier = 1.0;
+    
+    // Clear any active powerups from previous game
+    clearAllActivePowerups();
+    isZapsActive = false;
+    isInvincible = false;
     
     // Initialize mobile controls
     addMobileControls();
@@ -386,6 +394,142 @@ function updateUI() {
     // Update speed display - convert to mph for a more realistic feel
     const speedMph = Math.floor(speed * 6); // Simple conversion for visual purposes
     speedElem.textContent = speedMph;
+    
+    // Update active powerups UI
+    updateActivePowerupsUI();
+}
+
+// Function to update the active powerups UI
+function updateActivePowerupsUI() {
+    // Find or create the powerups container
+    let powerupsContainer = document.getElementById('powerups-container');
+    if (!powerupsContainer) {
+        powerupsContainer = document.createElement('div');
+        powerupsContainer.id = 'powerups-container';
+        powerupsContainer.className = 'stat';
+        powerupsContainer.style.position = 'fixed';
+        powerupsContainer.style.top = '20px';
+        powerupsContainer.style.right = '20px';
+        powerupsContainer.style.display = 'flex';
+        powerupsContainer.style.flexDirection = 'column';
+        powerupsContainer.style.gap = '5px';
+        powerupsContainer.style.background = 'rgba(0, 0, 0, 0.5)';
+        powerupsContainer.style.padding = '10px';
+        powerupsContainer.style.borderRadius = '10px';
+        powerupsContainer.style.zIndex = '100';
+        document.body.appendChild(powerupsContainer);
+    }
+    
+    // Clear existing content
+    powerupsContainer.innerHTML = '<div style="font-weight: bold; margin-bottom: 5px; text-align: center;">Active Powerups</div>';
+    
+    // Check if there are any active powerups
+    if (activePowerups.length === 0) {
+        const noPowerups = document.createElement('div');
+        noPowerups.textContent = 'None';
+        noPowerups.style.textAlign = 'center';
+        noPowerups.style.color = '#888';
+        noPowerups.style.fontSize = '14px';
+        powerupsContainer.appendChild(noPowerups);
+    } else {
+        // Sort powerups by remaining time (ascending)
+        activePowerups.sort((a, b) => a.remainingTime - b.remainingTime);
+        
+        // Add each active powerup to the container
+        activePowerups.forEach(powerup => {
+            const powerupElem = document.createElement('div');
+            powerupElem.style.display = 'flex';
+            powerupElem.style.justifyContent = 'space-between';
+            powerupElem.style.alignItems = 'center';
+            powerupElem.style.padding = '3px 8px';
+            powerupElem.style.borderRadius = '5px';
+            
+            // Different colors based on powerup type
+            let backgroundColor, icon, label;
+            switch (powerup.type) {
+                case 'zaps':
+                    backgroundColor = 'rgba(255, 215, 0, 0.3)'; // Gold for ZAPS
+                    icon = '⚡';
+                    label = 'ZAPS';
+                    break;
+                case 'energy':
+                    backgroundColor = 'rgba(0, 255, 0, 0.3)'; // Green for Energy
+                    icon = '🔋';
+                    label = 'Energy';
+                    break;
+                default:
+                    backgroundColor = 'rgba(255, 255, 255, 0.3)'; // Default
+                    icon = '✨';
+                    label = powerup.type;
+            }
+            
+            powerupElem.style.backgroundColor = backgroundColor;
+            
+            // Create the label with icon
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = `${icon} ${label}`;
+            nameSpan.style.fontWeight = 'bold';
+            
+            // Create the timer
+            const timerSpan = document.createElement('span');
+            const seconds = Math.ceil(powerup.remainingTime / 1000);
+            timerSpan.textContent = `${seconds}s`;
+            timerSpan.style.marginLeft = '10px';
+            
+            // Pulse animation for ending soon
+            if (seconds <= 5) {
+                timerSpan.style.animation = 'pulse 1s infinite';
+                // Add keyframes if they don't exist yet
+                if (!document.getElementById('powerup-animation-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'powerup-animation-style';
+                    style.textContent = `
+                        @keyframes pulse {
+                            0% { opacity: 1; }
+                            50% { opacity: 0.5; }
+                            100% { opacity: 1; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+            
+            powerupElem.appendChild(nameSpan);
+            powerupElem.appendChild(timerSpan);
+            powerupsContainer.appendChild(powerupElem);
+        });
+    }
+}
+
+// Function to clear all active powerups
+function clearAllActivePowerups() {
+    // Copy the array to avoid issues with modifying while iterating
+    const powerupsCopy = [...activePowerups];
+    
+    // Clear each powerup
+    powerupsCopy.forEach(powerup => {
+        // Remove visual effects if any
+        if (powerup.effect && truck) {
+            truck.remove(powerup.effect);
+        }
+        
+        // Reset any global flags based on powerup type
+        switch (powerup.type) {
+            case 'zaps':
+                isZapsActive = false;
+                isInvincible = false;
+                break;
+            case 'energy':
+                // Energy speed reset happens automatically when the game ends
+                break;
+        }
+    });
+    
+    // Clear the array
+    activePowerups = [];
+    
+    // Update the UI
+    updateActivePowerupsUI();
 }
 
 function gameOver() {
@@ -403,6 +547,9 @@ function gameOver() {
     // Update final score display
     finalScoreElem.textContent = `Distance: ${finalDistance}m | Money: $${finalMoney}`;
     document.getElementById('rpm-score').textContent = `Rate per Mile: $${rpm}`;
+    
+    // Clear all active powerups
+    clearAllActivePowerups();
     
     // Save score to Firebase if distance is at least 100 meters (prevents junk entries)
     if (finalDistance > 100 && window.currentPlayerName && window.firebaseRefs) {
@@ -3220,6 +3367,37 @@ function applyPowerUp(type) {
             
             console.log("ZAPS activated! Player is invincible and earning 1.5x for 15 seconds");
             
+            // Create a unique ID for this powerup instance
+            const zapsId = Date.now() + Math.random();
+            
+            // Add to active powerups
+            const zapsPowerup = {
+                id: zapsId,
+                type: 'zaps',
+                startTime: Date.now(),
+                duration: 15000,
+                remainingTime: 15000,
+                effect: auraEffect
+            };
+            activePowerups.push(zapsPowerup);
+            
+            // Update the powerups UI
+            updateActivePowerupsUI();
+            
+            // Set an interval to update the remaining time
+            const zapsInterval = setInterval(() => {
+                // Find this powerup in the active list
+                const index = activePowerups.findIndex(p => p.id === zapsId);
+                if (index !== -1) {
+                    // Update remaining time
+                    const elapsed = Date.now() - activePowerups[index].startTime;
+                    activePowerups[index].remainingTime = Math.max(0, activePowerups[index].duration - elapsed);
+                    
+                    // Update the UI
+                    updateActivePowerupsUI();
+                }
+            }, 1000);
+            
             // Set a timeout to disable the effect after 15 seconds
             setTimeout(() => {
                 isZapsActive = false;
@@ -3227,6 +3405,18 @@ function applyPowerUp(type) {
                 earningMultiplier = oldEarningMultiplier;
                 truck.remove(auraEffect);
                 console.log("ZAPS effect ended!");
+                
+                // Remove from active powerups
+                const index = activePowerups.findIndex(p => p.id === zapsId);
+                if (index !== -1) {
+                    activePowerups.splice(index, 1);
+                }
+                
+                // Clear the interval
+                clearInterval(zapsInterval);
+                
+                // Update the UI
+                updateActivePowerupsUI();
             }, 15000);
             break;
             
@@ -3239,11 +3429,53 @@ function applyPowerUp(type) {
             // Boost speed by 50%
             speed = Math.min(currentSpeed * 1.5, baseSpeed * maxSpeedMultiplier);
             
+            // Create a unique ID for this powerup instance
+            const energyId = Date.now() + Math.random();
+            
+            // Add to active powerups
+            const energyPowerup = {
+                id: energyId,
+                type: 'energy',
+                startTime: Date.now(),
+                duration: 12000,
+                remainingTime: 12000
+            };
+            activePowerups.push(energyPowerup);
+            
+            // Update the powerups UI
+            updateActivePowerupsUI();
+            
+            // Set an interval to update the remaining time
+            const energyInterval = setInterval(() => {
+                // Find this powerup in the active list
+                const index = activePowerups.findIndex(p => p.id === energyId);
+                if (index !== -1) {
+                    // Update remaining time
+                    const elapsed = Date.now() - activePowerups[index].startTime;
+                    activePowerups[index].remainingTime = Math.max(0, activePowerups[index].duration - elapsed);
+                    
+                    // Update the UI
+                    updateActivePowerupsUI();
+                }
+            }, 1000);
+            
             // Set a timeout to return to normal speed after 12 seconds
             setTimeout(() => {
                 if (gameStarted && !inTruckstop) {
                     speed = currentSpeed; // Return to the speed before the power-up
                     console.log("Energy speed boost ended!");
+                    
+                    // Remove from active powerups
+                    const index = activePowerups.findIndex(p => p.id === energyId);
+                    if (index !== -1) {
+                        activePowerups.splice(index, 1);
+                    }
+                    
+                    // Clear the interval
+                    clearInterval(energyInterval);
+                    
+                    // Update the UI
+                    updateActivePowerupsUI();
                 }
             }, 12000);
             break;
@@ -3822,6 +4054,14 @@ function addResponsiveStyles() {
             #lizard-warning {
                 font-size: 16px !important;
                 padding: 10px !important;
+            }
+            
+            #powerups-container {
+                font-size: 12px !important;
+                padding: 8px !important;
+                top: 10px !important;
+                right: 10px !important;
+                max-width: 150px !important;
             }
             
             .mobile-notice {
