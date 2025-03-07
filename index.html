@@ -65,6 +65,7 @@
         #start-screen, #game-over, #truckstop-ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 15px; }
         #start-screen { display: block; max-height: 90vh; overflow-y: auto; width: 80%; max-width: 800px; }
         #game-over, #truckstop-ui { display: none; }
+        #game-over { width: 60%; max-width: 500px; transition: width 0.3s, max-width 0.3s, padding 0.3s; }
         #title { font-size: 64px; margin-bottom: 30px; color: #FFD700; }
         #instructions { font-size: 24px; margin-bottom: 20px; line-height: 1.5; }
         #start-btn, #restart-btn, #truckstop-ui button { font-size: 24px; padding: 10px 30px; background: #4CAF50; border: none; border-radius: 5px; color: white; cursor: pointer; margin: 5px; }
@@ -82,6 +83,39 @@
         #game-info { font-size: 18px; margin-bottom: 20px; color: #FFD700; }
         #game-info ul { list-style: none; padding: 0; }
         #game-info li { margin: 5px 0; }
+        
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            #title { font-size: 42px; margin-bottom: 15px; }
+            #instructions { font-size: 18px; }
+            #game-over { 
+                width: 90% !important; 
+                max-width: 100% !important;
+                padding: 15px;
+                box-sizing: border-box;
+            }
+            #game-over h1 { font-size: 32px; margin-bottom: 15px; }
+            #final-score { font-size: 22px; margin-bottom: 15px; }
+            #rpm-score { font-size: 18px !important; }
+            #game-over p { font-size: 16px; }
+            #restart-btn, #game-over button { 
+                font-size: 18px;
+                padding: 8px 20px;
+                margin: 3px;
+            }
+            .difficulty-select { 
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .difficulty-btn { 
+                font-size: 16px;
+                padding: 8px 20px;
+            }
+            .difficulty-info { font-size: 16px; }
+            #game-info { font-size: 16px; }
+            #game-info h3 { font-size: 18px; }
+            #game-info li { font-size: 15px; }
+        }
         
         /* Truck & Trailer Selection Styles */
         #truck-selection, #trailer-selection { 
