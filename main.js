@@ -2592,7 +2592,7 @@ function createBillboard(x, z, isLeftSide = true) {
     
     // Ladder for maintenance access - moved to side of the structure
     const ladderWidth = 0.6;
-    const ladderHeight = 6; // Taller ladder for bigger billboard
+    const ladderHeight = 7; // Taller ladder for bigger billboard
     const ladderDepth = 0.2;
     const ladderGroup = new THREE.Group();
     
@@ -2609,7 +2609,7 @@ function createBillboard(x, z, isLeftSide = true) {
     ladderGroup.add(rightRail);
     
     // Create ladder rungs
-    const rungCount = 10; // More rungs for taller ladder
+    const rungCount = 12; // More rungs for taller ladder
     const rungGeometry = new THREE.BoxGeometry(ladderWidth, 0.05, 0.05);
     const rungMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
     
@@ -2620,7 +2620,7 @@ function createBillboard(x, z, isLeftSide = true) {
     }
     
     // Position ladder at side of billboard, not in front
-    ladderGroup.position.set(7.3, 3, -0.5); // Moved to right side and behind
+    ladderGroup.position.set(5.3, 3, -0.5); // Moved to right side and behind
     billboardGroup.add(ladderGroup);
     
     billboardGroup.position.set(x, 0, z);
