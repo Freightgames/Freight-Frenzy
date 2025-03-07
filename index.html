@@ -9,6 +9,35 @@
 
   gtag('config', 'G-TFRQX31RC5');
 </script>
+<!-- Firebase SDK -->
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-analytics.js";
+  import { getDatabase, ref, set, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-database.js";
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyD6RpTdpOUCb6CKMlVONfqHQMaGExbjHrg",
+    authDomain: "freight-frenzy.firebaseapp.com",
+    databaseURL: "https://freight-frenzy-default-rtdb.firebaseio.com",
+    projectId: "freight-frenzy",
+    storageBucket: "freight-frenzy.appspot.com",
+    messagingSenderId: "577311403672",
+    appId: "1:577311403672:web:1e536c1c500f47dbd1aaed",
+    measurementId: "G-48ZXBS53PN"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const database = getDatabase(app);
+
+  // Make Firebase objects available globally
+  window.firebaseApp = app;
+  window.firebaseDatabase = database;
+  window.firebaseRefs = { ref, set, push, serverTimestamp };
+</script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -825,6 +854,14 @@
                 <li><span style="color: #0000ff;">DOT Officer</span>: Fines $50, slows truck</li>
             </ul>
         </div>
+        
+        <!-- Username Input -->
+        <div class="username-input" style="margin-bottom: 20px;">
+            <label for="player-name" style="color: white; font-size: 18px; margin-bottom: 10px; display: block;">Enter Your Trucker Name:</label>
+            <input type="text" id="player-name" placeholder="Enter name (max 15 chars)" maxlength="15" style="padding: 10px; width: 250px; font-size: 16px; border-radius: 5px; border: none; text-align: center; margin-bottom: 5px;" />
+            <p style="color: #FFD700; font-size: 14px;">Your name will appear on the leaderboard</p>
+        </div>
+        
         <button id="start-btn">START GAME</button>
     </div>
 
@@ -832,10 +869,15 @@
     <div id="game-over">
         <h1>GAME OVER</h1>
         <div id="final-score">Distance: 0m | Money: $0</div>
+        <div id="rpm-score" style="margin-top: 10px; font-size: 20px; color: #FFD700;">Rate per Mile: $0.00</div>
         <p>Truck yeah! Share your score with #FreightFrenzy</p>
         <!-- <button onclick="reviewAds()">Review Ads</button> -->
         <button onclick="shareScore()">Share Score</button>
         <button id="restart-btn">Play Again</button>
+        <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 15px;">
+            <p style="font-size: 16px; margin-bottom: 10px;">See how you stack up against other truckers:</p>
+            <button onclick="window.location.href='leaderboard.html'" style="background: #4267B2; padding: 8px 15px; border: none; border-radius: 5px; color: white; cursor: pointer;">View Leaderboard</button>
+        </div>
     </div>
 
     <!-- Truckstop UI -->
