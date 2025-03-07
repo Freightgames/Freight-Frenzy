@@ -164,6 +164,7 @@ let money = 0;
 let distanceTraveled = 0;
 let isInvincible = false;
 let isZapsActive = false;
+let difficultyLevel = 'medium';
 let earningMultiplier = 1;
 let fuelConsumptionRate = 1;
 let isPaused = false;
@@ -353,6 +354,7 @@ function startEndlessRunnerGame() {
 
 function setDifficulty(level) {
     console.log("Setting difficulty to:", level);
+    difficultyLevel = level;
     switch (level) {
         case 'easy':
             baseSpeed = 8;
@@ -407,7 +409,7 @@ function gameOver() {
             distance: finalDistance,
             money: finalMoney,
             rpm: parseFloat(rpm),
-            difficulty: currentDifficulty,
+            difficulty: difficultyLevel,
             truck: selectedTruckType,
             trailer: selectedTrailerType,
             timestamp: Date.now()

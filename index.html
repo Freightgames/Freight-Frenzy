@@ -46,6 +46,18 @@
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Arial', sans-serif; }
         #game { width: 100vw; height: 100vh; }
         #ui { position: absolute; top: 20px; left: 20px; color: white; font-size: 24px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); display: none; flex-direction: column; gap: 10px; }
+
+        @media (max-width: 768px) {
+            #ui {
+                flex-direction: row;
+                flex-wrap: wrap;
+                font-size: 14px;
+            }
+            .stat {
+                padding: 8px 8px;
+            }
+        }
+
         .stat { background: rgba(0, 0, 0, 0.5); padding: 10px 20px; border-radius: 10px; }
         #start-screen, #game-over, #truckstop-ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 15px; }
         #start-screen { display: block; max-height: 90vh; overflow-y: auto; width: 80%; max-width: 800px; }
@@ -863,6 +875,7 @@
         </div>
         
         <button id="start-btn">START GAME</button>
+        <button onclick="window.open('leaderboard.html', '_blank')" style="display:block; margin-left: auto; margin-right: auto; background: #4267B2; padding: 8px 15px; border: none; border-radius: 5px; color: white; cursor: pointer; margin-top: 10px;">View Leaderboard</button>
     </div>
 
     <!-- Game Over Screen -->
@@ -876,7 +889,7 @@
         <button id="restart-btn">Play Again</button>
         <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 15px;">
             <p style="font-size: 16px; margin-bottom: 10px;">See how you stack up against other truckers:</p>
-            <button onclick="window.location.href='leaderboard.html'" style="background: #4267B2; padding: 8px 15px; border: none; border-radius: 5px; color: white; cursor: pointer;">View Leaderboard</button>
+            <button onclick="window.open('leaderboard.html', '_blank')" style="background: #4267B2; padding: 8px 15px; border: none; border-radius: 5px; color: white; cursor: pointer;">View Leaderboard</button>
         </div>
     </div>
 
