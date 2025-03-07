@@ -17,8 +17,8 @@ const billboardMessages = [
     { weight: 1, type: 'text', content: 'Strong Solo Sergey Wanted' },
     { weight: 1, type: 'text', content: 'Lip Pillows and Freedom' },
     { weight: 1, type: 'text', content: 'SAY NO TO CHEAP FREIGHT' },
-    { weight: 0.25, type: 'image', content: './billboard-images/loadpartner.png' },
-    { weight: 0.25, type: 'image', content: './billboard-images/freight360.png' },
+    { weight: 0.33, type: 'image', content: './billboard-images/freight360.png' },
+    { weight: 0.33, type: 'image', content: './billboard-images/loadpartner.png' },
 ];
 
 // Add clock for delta time calculation
