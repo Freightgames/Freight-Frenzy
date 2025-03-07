@@ -8,10 +8,12 @@ document.getElementById('game').appendChild(renderer.domElement);
 
 // Game constants
 const billboardMessages = [
-    'HELL IS REAL',
-    'TRUCK STOP AHEAD',
-    'REST AREA 10 MILES',
-    'GAS FOOD LODGING'
+    { type: 'text', content: 'HELL IS REAL' },
+    { type: 'text', content: 'TRUCK STOP AHEAD' },
+    { type: 'text', content: 'REST AREA 10 MILES' },
+    { type: 'text', content: 'GAS FOOD LODGING' },
+    { type: 'image', content: './billboard-images/loadpartner.png' },
+    { type: 'image', content: './billboard-images/freight360.png' },
 ];
 
 // Add clock for delta time calculation
@@ -2217,9 +2219,9 @@ function createGuardrail(length) {
     return guardrailGroup;
 }
 
-function createBillboardTexture(text) {
+function createBillboardTexture(message) {
     const canvas = document.createElement('canvas');
-    canvas.width = 1024;  // Higher resolution for better text quality
+    canvas.width = 1024;  // Higher resolution for better quality
     canvas.height = 512;
     const context = canvas.getContext('2d');
     
@@ -2236,12 +2238,115 @@ function createBillboardTexture(text) {
     context.strokeStyle = '#666666';
     context.lineWidth = 8;
     context.strokeRect(40, 40, 944, 432);
+
+    // Check if the message is a string (for backward compatibility) or an object
+    let messageType = 'text';
+    let messageContent = message;
     
+    if (typeof message === 'object') {
+        messageType = message.type;
+        messageContent = message.content;
+    }
+    
+    // Handle image type
+    if (messageType === 'image') {
+        return new Promise((resolve) => {
+            const img = new Image();
+            
+            // Don't use crossOrigin for local files
+            if (messageContent.startsWith('http')) {
+                img.crossOrigin = 'Anonymous';  // Only for remote URLs
+            }
+            
+            img.onload = function() {
+                try {
+                    // Calculate aspect ratio to fit the image properly
+                    const imgRatio = img.width / img.height;
+                    let drawWidth = 864; // Max width (904 - 40 padding)
+                    let drawHeight = drawWidth / imgRatio;
+                    
+                    // If too tall, scale by height instead
+                    if (drawHeight > 372) { // Max height (392 - 20 padding)
+                        drawHeight = 372;
+                        drawWidth = drawHeight * imgRatio;
+                    }
+                    
+                    // Center the image
+                    const drawX = 512 - (drawWidth / 2);
+                    const drawY = 256 - (drawHeight / 2);
+                    
+                    // Draw the image
+                    context.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                    
+                    // Create texture with specific settings to avoid WebGL issues
+                    const texture = new THREE.CanvasTexture(canvas);
+                    texture.minFilter = THREE.LinearFilter;
+                    texture.generateMipmaps = false;
+                    
+                    resolve(texture);
+                } catch (error) {
+                    console.error("Error creating billboard texture:", error);
+                    
+                    // Fallback to error text
+                    context.fillStyle = '#ffffff';
+                    context.font = 'bold 40px Arial';
+                    context.textAlign = 'center';
+                    context.textBaseline = 'middle';
+                    context.fillText('Image Error: ' + error.message, 512, 256);
+                    context.font = 'bold 30px Arial';
+                    context.fillText('Path: ' + messageContent, 512, 320);
+                    
+                    const fallbackTexture = new THREE.CanvasTexture(canvas);
+                    resolve(fallbackTexture);
+                }
+            };
+            
+            img.onerror = function(event) {
+                console.error("Failed to load image:", messageContent, event);
+                
+                // More detailed error message
+                context.fillStyle = '#ffffff';
+                context.font = 'bold 40px Arial';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText('Image Loading Error', 512, 230);
+                context.font = 'bold 30px Arial';
+                context.fillText('Path: ' + messageContent, 512, 280);
+                context.font = 'bold 20px Arial';
+                context.fillText('Check the console for details', 512, 330);
+                
+                const fallbackTexture = new THREE.CanvasTexture(canvas);
+                resolve(fallbackTexture);
+            };
+            
+            // Add a timeout to prevent hanging if image never loads
+            setTimeout(() => {
+                if (!img.complete) {
+                    img.src = ''; // Cancel the image load
+                    
+                    context.fillStyle = '#ffffff';
+                    context.font = 'bold 40px Arial';
+                    context.textAlign = 'center';
+                    context.textBaseline = 'middle';
+                    context.fillText('Image Load Timeout', 512, 256);
+                    context.font = 'bold 30px Arial';
+                    context.fillText('Path: ' + messageContent, 512, 320);
+                    
+                    const fallbackTexture = new THREE.CanvasTexture(canvas);
+                    resolve(fallbackTexture);
+                }
+            }, 5000); // 5 second timeout
+            
+            img.src = messageContent;
+        });
+    }
+    
+    // Handle text type (original functionality)
     // Prepare text styling
     context.fillStyle = '#ffffff';  // Bright white text for contrast
     
     // Break the message into words for flexible layout
-    const words = text.split(' ');
+    const words = messageContent.split(' ');
     let lines = [];
     let currentLine = '';
     
@@ -2266,8 +2371,8 @@ function createBillboardTexture(text) {
     // Choose font size based on number of lines and length of text
     let fontSize;
     if (lines.length === 1) {
-        if (text.length < 10) fontSize = 120;
-        else if (text.length < 15) fontSize = 100;
+        if (messageContent.length < 10) fontSize = 120;
+        else if (messageContent.length < 15) fontSize = 100;
         else fontSize = 80;
     } else if (lines.length === 2) {
         fontSize = 70;
@@ -2278,7 +2383,7 @@ function createBillboardTexture(text) {
     }
     
     // If the text is all caps, reduce the font size slightly for better fit
-    if (text === text.toUpperCase() && text.length > 10) {
+    if (messageContent === messageContent.toUpperCase() && messageContent.length > 10) {
         fontSize = Math.max(40, fontSize - 10);
     }
     
@@ -2370,11 +2475,40 @@ function createBillboard(x, z, isLeftSide = true) {
     const signGeometry = new THREE.BoxGeometry(14, 7, 0.4);
     const message = billboardMessages[Math.floor(Math.random() * billboardMessages.length)];
     console.log("Selected billboard message:", message);
-    const signMaterial = new THREE.MeshPhongMaterial({ map: createBillboardTexture(message) });
+    
+    // Default texture (loading texture)
+    const loadingCanvas = document.createElement('canvas');
+    loadingCanvas.width = 512;
+    loadingCanvas.height = 256;
+    const loadingContext = loadingCanvas.getContext('2d');
+    loadingContext.fillStyle = '#000000';
+    loadingContext.fillRect(0, 0, 512, 256);
+    loadingContext.fillStyle = '#ffffff';
+    loadingContext.font = 'bold 48px Arial';
+    loadingContext.textAlign = 'center';
+    loadingContext.textBaseline = 'middle';
+    loadingContext.fillText('Loading...', 256, 128);
+    
+    const loadingTexture = new THREE.CanvasTexture(loadingCanvas);
+    const signMaterial = new THREE.MeshPhongMaterial({ map: loadingTexture });
     const sign = new THREE.Mesh(signGeometry, signMaterial);
     sign.position.y = 10; // Higher position for larger sign
     sign.castShadow = true;
     billboardGroup.add(sign);
+    
+    // Create the final texture (which might be async for images)
+    const texturePromise = createBillboardTexture(message);
+    
+    // Handle both promises and direct textures
+    if (texturePromise instanceof Promise) {
+        texturePromise.then(texture => {
+            signMaterial.map = texture;
+            signMaterial.needsUpdate = true;
+        });
+    } else {
+        signMaterial.map = texturePromise;
+        signMaterial.needsUpdate = true;
+    }
     
     // Add spotlights to illuminate the billboard at night - now positioned on top of sign
     const spotlightCount = 2; // Two spotlights, one on each side
@@ -2472,11 +2606,11 @@ function createBillboard(x, z, isLeftSide = true) {
 function updateBillboardMessages() {
     // Add new messages to the existing array
     billboardMessages.push(
-        'BROKER TRANSPARENCY NOW!',
-        'Your Ad Here',
-        'Strong Solo Sergey Wanted',
-        'Lip Pillows and Freedom',
-        'SAY NO TO CHEAP FREIGHT'
+        { type: 'text', content: 'BROKER TRANSPARENCY NOW!' },
+        { type: 'text', content: 'Your Ad Here' },
+        { type: 'text', content: 'Strong Solo Sergey Wanted' },
+        { type: 'text', content: 'Lip Pillows and Freedom' },
+        { type: 'text', content: 'SAY NO TO CHEAP FREIGHT' }
     );
     console.log("Billboard messages updated:", billboardMessages);
 }
