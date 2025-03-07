@@ -251,10 +251,26 @@ function togglePause() {
 }
 
 function startEndlessRunnerGame() {
-    console.log("Starting endless runner game with truck: " + selectedTruckType + " and trailer: " + selectedTrailerType);
+    if (gameStarted) return;
     
-    // Hide the start screen and show the UI
+    // Get player name
+    let playerName = document.getElementById('player-name').value.trim();
+    
+    // Default to a random trucker handle if left blank
+    if (!playerName) {
+        const randomHandles = ['RoadDog', 'BigRigBoss', 'GearJammer', 'DieselDave', 'HighwayHero', 
+                              'AsphaltCowboy', 'MileMarker', 'RubberDuck', 'NightRider', 'SmokeEater'];
+        playerName = randomHandles[Math.floor(Math.random() * randomHandles.length)] + 
+                     Math.floor(Math.random() * 99 + 1);
+    }
+    
+    // Store the player name for later use
+    window.currentPlayerName = playerName;
+    
+    // Hide the start screen
     document.getElementById('start-screen').style.display = 'none';
+    
+    // Show the UI
     document.getElementById('ui').style.display = 'flex';
     
     // Reset game variables
@@ -372,12 +388,49 @@ function gameOver() {
     console.log("Game over!");
     gameStarted = false;
     document.getElementById('game-over').style.display = 'block';
-    finalScoreElem.textContent = `Distance: ${Math.floor(distanceTraveled)}m | Money: $${Math.floor(money)}`;
+    
+    // Calculate distance and money
+    const finalDistance = Math.floor(distanceTraveled);
+    const finalMoney = Math.floor(money);
+    
+    // Calculate Rate Per Mile (RPM)
+    const rpm = finalDistance > 0 ? (finalMoney / finalDistance).toFixed(2) : 0;
+    
+    // Update final score display
+    finalScoreElem.textContent = `Distance: ${finalDistance}m | Money: $${finalMoney}`;
+    document.getElementById('rpm-score').textContent = `Rate per Mile: $${rpm}`;
+    
+    // Save score to Firebase if distance is at least 100 meters (prevents junk entries)
+    if (finalDistance > 100 && window.currentPlayerName && window.firebaseRefs) {
+        const scoreData = {
+            playerName: window.currentPlayerName,
+            distance: finalDistance,
+            money: finalMoney,
+            rpm: parseFloat(rpm),
+            difficulty: currentDifficulty,
+            truck: selectedTruckType,
+            trailer: selectedTrailerType,
+            timestamp: Date.now()
+        };
+        
+        // Push the score to the leaderboard collection
+        try {
+            const { ref, push } = window.firebaseRefs;
+            const leaderboardRef = ref(window.firebaseDatabase, 'leaderboard');
+            push(leaderboardRef, scoreData);
+            console.log("Score saved to leaderboard!");
+        } catch (error) {
+            console.error("Error saving score:", error);
+        }
+    }
 }
 
 function shareScore() {
     const score = Math.floor(distanceTraveled);
-    const message = `I just scored ${score}m in Freight Frenzy! #FreightFrenzy`;
+    const earnedMoney = Math.floor(money);
+    const rpm = score > 0 ? (earnedMoney / score).toFixed(2) : 0;
+    
+    const message = `I just hauled ${score}m in Freight Frenzy with a Rate/Mile of $${rpm}! Can you beat that? #FreightFrenzy`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
     window.open(twitterUrl, '_blank');
 }
