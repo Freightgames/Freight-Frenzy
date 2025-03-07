@@ -8,12 +8,17 @@ document.getElementById('game').appendChild(renderer.domElement);
 
 // Game constants
 const billboardMessages = [
-    { type: 'text', content: 'HELL IS REAL' },
-    { type: 'text', content: 'TRUCK STOP AHEAD' },
-    { type: 'text', content: 'REST AREA 10 MILES' },
-    { type: 'text', content: 'GAS FOOD LODGING' },
-    { type: 'image', content: './billboard-images/loadpartner.png' },
-    { type: 'image', content: './billboard-images/freight360.png' },
+    { weight: 1, type: 'text', content: 'HELL IS REAL' },
+    { weight: 1, type: 'text', content: 'TRUCK STOP AHEAD' },
+    { weight: 1, type: 'text', content: 'REST AREA 10 MILES' },
+    { weight: 1, type: 'text', content: 'GAS FOOD LODGING' },
+    { weight: 1, type: 'text', content: 'BROKER TRANSPARENCY NOW!' },
+    { weight: 1, type: 'text', content: 'Your Ad Here' },
+    { weight: 1, type: 'text', content: 'Strong Solo Sergey Wanted' },
+    { weight: 1, type: 'text', content: 'Lip Pillows and Freedom' },
+    { weight: 1, type: 'text', content: 'SAY NO TO CHEAP FREIGHT' },
+    { weight: 0.25, type: 'image', content: './billboard-images/loadpartner.png' },
+    { weight: 0.25, type: 'image', content: './billboard-images/freight360.png' },
 ];
 
 // Add clock for delta time calculation
@@ -2444,6 +2449,34 @@ function createBillboardTexture(message) {
     return new THREE.CanvasTexture(canvas);
 }
 
+// Add this function before createBillboard
+function getWeightedRandomBillboardMessage() {
+    // Calculate total weight
+    let totalWeight = 0;
+    
+    // If weight is not defined, default to 1
+    billboardMessages.forEach(message => {
+        const weight = message.weight || 1;
+        totalWeight += weight;
+    });
+    
+    // Get a random number between 0 and totalWeight
+    let random = Math.random() * totalWeight;
+    
+    // Find the message that corresponds to the random weight
+    for (const message of billboardMessages) {
+        const weight = message.weight || 1;
+        random -= weight;
+        
+        if (random <= 0) {
+            return message;
+        }
+    }
+    
+    // Fallback (in case of rounding errors)
+    return billboardMessages[billboardMessages.length - 1];
+}
+
 function createBillboard(x, z, isLeftSide = true) {
     const billboardGroup = new THREE.Group();
     
@@ -2480,7 +2513,7 @@ function createBillboard(x, z, isLeftSide = true) {
     
     // Billboard sign - INCREASED SIZE
     const signGeometry = new THREE.BoxGeometry(14, 7, 0.4);
-    const message = billboardMessages[Math.floor(Math.random() * billboardMessages.length)];
+    const message = getWeightedRandomBillboardMessage();
     console.log("Selected billboard message:", message);
     
     // Default texture (loading texture)
@@ -2608,22 +2641,6 @@ function createBillboard(x, z, isLeftSide = true) {
     
     return billboardGroup;
 }
-
-// Update billboard messages for more variety
-function updateBillboardMessages() {
-    // Add new messages to the existing array
-    billboardMessages.push(
-        { type: 'text', content: 'BROKER TRANSPARENCY NOW!' },
-        { type: 'text', content: 'Your Ad Here' },
-        { type: 'text', content: 'Strong Solo Sergey Wanted' },
-        { type: 'text', content: 'Lip Pillows and Freedom' },
-        { type: 'text', content: 'SAY NO TO CHEAP FREIGHT' }
-    );
-    console.log("Billboard messages updated:", billboardMessages);
-}
-
-// Make sure billboard messages get updated before the game starts
-updateBillboardMessages();
 
 function createZapsTexture() {
     const canvas = document.createElement('canvas');
