@@ -19,6 +19,7 @@ const billboardMessages = [
     { weight: 1, type: 'text', content: 'SAY NO TO CHEAP FREIGHT' },
     { weight: 0.33, type: 'image', content: './billboard-images/freight360.png' },
     { weight: 0.33, type: 'image', content: './billboard-images/loadpartner.png' },
+    { weight: 0.33, type: 'image', content: './billboard-images/wtt.webp' },
 ];
 
 // Add clock for delta time calculation
@@ -2513,7 +2514,7 @@ function createBillboard(x, z, isLeftSide = true) {
     billboardGroup.add(rightSupport);
     
     // Billboard sign - INCREASED SIZE
-    const signGeometry = new THREE.BoxGeometry(14, 7, 0.4);
+    const signGeometry = new THREE.BoxGeometry(21, 10.5, 0.4); // 50% larger (from 14x7 to 21x10.5)
     const message = getWeightedRandomBillboardMessage();
     console.log("Selected billboard message:", message);
     
@@ -2533,7 +2534,7 @@ function createBillboard(x, z, isLeftSide = true) {
     const loadingTexture = new THREE.CanvasTexture(loadingCanvas);
     const signMaterial = new THREE.MeshPhongMaterial({ map: loadingTexture });
     const sign = new THREE.Mesh(signGeometry, signMaterial);
-    sign.position.y = 10; // Higher position for larger sign
+    sign.position.y = 12; // Higher position for larger sign (was 10)
     sign.castShadow = true;
     billboardGroup.add(sign);
     
@@ -2560,8 +2561,8 @@ function createBillboard(x, z, isLeftSide = true) {
         const spotHousingMat = new THREE.MeshPhongMaterial({ color: 0x333333 });
         const spotHousing = new THREE.Mesh(spotHousingGeo, spotHousingMat);
         
-        const xPos = i === 0 ? -6.5 : 6.5; // Position on either side of sign (adjusted for larger sign)
-        spotHousing.position.set(xPos, 13.6, -0.2); // Moved to top of sign and slightly back
+        const xPos = i === 0 ? -9.75 : 9.75; // Position on either side of sign (adjusted for larger sign, was -6.5/6.5)
+        spotHousing.position.set(xPos, 18.1, -0.2); // Moved to top of sign and slightly back (was 13.6)
         spotHousing.rotation.x = Math.PI / 4; // Angle downward to illuminate sign
         billboardGroup.add(spotHousing);
         
@@ -2573,27 +2574,27 @@ function createBillboard(x, z, isLeftSide = true) {
             emissiveIntensity: 0.3
         });
         const spotBulb = new THREE.Mesh(spotBulbGeo, spotBulbMat);
-        spotBulb.position.set(xPos, 13.5, -0.15); // Aligned with housing
+        spotBulb.position.set(xPos, 18, -0.15); // Aligned with housing (was 13.5)
         billboardGroup.add(spotBulb);
     }
     
     // Create small catwalk platform for maintenance - moved behind sign
-    const catwalkGeometry = new THREE.BoxGeometry(14, 0.1, 0.6);
+    const catwalkGeometry = new THREE.BoxGeometry(21, 0.1, 0.6); // Widened to match sign (was 14)
     const catwalkMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
     const catwalk = new THREE.Mesh(catwalkGeometry, catwalkMaterial);
-    catwalk.position.set(0, 6.5, -0.7); // Moved behind sign
+    catwalk.position.set(0, 6.75, -0.7); // Moved behind sign (slight adjustment)
     billboardGroup.add(catwalk);
     
     // Add railings to catwalk - moved behind sign
-    const railingGeometry = new THREE.BoxGeometry(14, 0.5, 0.05);
+    const railingGeometry = new THREE.BoxGeometry(21, 0.5, 0.05); // Widened to match sign (was 14)
     const railingMaterial = new THREE.MeshPhongMaterial({ color: 0x555555 });
     const railing = new THREE.Mesh(railingGeometry, railingMaterial);
-    railing.position.set(0, 6.8, -0.9); // Moved behind sign
+    railing.position.set(0, 7.05, -0.9); // Moved behind sign (slight adjustment)
     billboardGroup.add(railing);
     
     // Ladder for maintenance access - moved to side of the structure
     const ladderWidth = 0.6;
-    const ladderHeight = 7; // Taller ladder for bigger billboard
+    const ladderHeight = 10; // Taller ladder for bigger billboard (was 7)
     const ladderDepth = 0.2;
     const ladderGroup = new THREE.Group();
     
@@ -2621,7 +2622,7 @@ function createBillboard(x, z, isLeftSide = true) {
     }
     
     // Position ladder at side of billboard, not in front
-    ladderGroup.position.set(5.3, 3, -0.5); // Moved to right side and behind
+    ladderGroup.position.set(8, 4.5, -0.5); // Moved to right side and behind (adjusted for larger sign, was 5.3, 3)
     billboardGroup.add(ladderGroup);
     
     billboardGroup.position.set(x, 0, z);
