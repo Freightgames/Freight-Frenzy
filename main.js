@@ -1045,10 +1045,7 @@ function applyLotLizardPenalty() {
     
     // Display penalty message
     const messageDiv = document.createElement('div');
-    messageDiv.style.position = 'fixed';
-    messageDiv.style.top = '40%';
-    messageDiv.style.left = '50%';
-    messageDiv.style.transform = 'translate(-50%, -50%)';
+    messageDiv.className = 'game-message'; // Add a class for easier styling
     messageDiv.style.background = 'rgba(0,0,0,0.9)';
     messageDiv.style.color = 'white';
     messageDiv.style.padding = '20px';
@@ -1056,6 +1053,8 @@ function applyLotLizardPenalty() {
     messageDiv.style.fontSize = '24px';
     messageDiv.style.textAlign = 'center';
     messageDiv.style.zIndex = '1001';
+    messageDiv.style.width = '100%';
+    messageDiv.style.boxSizing = 'border-box';
     messageDiv.innerHTML = message;
     
     document.body.appendChild(messageDiv);
@@ -3764,6 +3763,7 @@ function displayInGameMessage(message) {
 
     // Create the message element
     const messageDiv = document.createElement('div');
+    messageDiv.className = 'game-message'; // Add a class for easier styling
     messageDiv.style.background = 'rgba(0,0,0,0.9)';
     messageDiv.style.color = 'white';
     messageDiv.style.padding = '20px';

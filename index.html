@@ -84,6 +84,13 @@
         #game-info ul { list-style: none; padding: 0; }
         #game-info li { margin: 5px 0; }
         
+        /* In-game message styles */
+        .game-message {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            border-left: 4px solid #af4c4c;
+        }
+        
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {
             #title { font-size: 42px; margin-bottom: 15px; }
@@ -115,6 +122,20 @@
             #game-info { font-size: 16px; }
             #game-info h3 { font-size: 18px; }
             #game-info li { font-size: 15px; }
+            
+            /* Mobile in-game messages styles */
+            #alert-container {
+                width: 60% !important;
+                top: 105px !important;
+                left: 32% !important;
+                gap: 5px !important;
+            }
+            #alert-container div, .game-message {
+                font-size: 14px !important;
+                padding: 8px 12px !important;
+                opacity: 0.8 !important;
+                max-width: 100% !important;
+            }
         }
         
         /* Truck & Trailer Selection Styles */
