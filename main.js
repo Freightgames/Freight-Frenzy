@@ -218,8 +218,19 @@ const regions = [
 ];
 
 // Game objects
-const powerUpTypes = ['zaps', 'energy', 'wrench', 'fuelCan'];
-const obstacleTypes = ['doubleBroker', 'lotLizard', 'lowBridge', 'dotOfficer'];
+const powerUpTypes = [
+    { type: 'zaps', weight: 0.5 },
+    { type: 'energy', weight: 5 },
+    { type: 'wrench', weight: 2 },
+    { type: 'fuelCan', weight: 4 }
+];
+
+const obstacleTypes = [
+    { type: 'doubleBroker', weight: 2 },
+    { type: 'lotLizard', weight: 2 },
+    { type: 'lowBridge', weight: 1 },
+    { type: 'dotOfficer', weight: 2 }
+];
 
 // Create the player's truck - using let instead of const to allow reassignment
 let truck = createTruck();
@@ -1276,9 +1287,9 @@ function endlessRunnerLoop() {
         spawnTimer += speed * delta;
         if (spawnTimer > 20) {
             if (Math.random() < 0.5) {
-                scene.add(createObstacle(obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)], truck.position.z - 30));
+                scene.add(createObstacle(getWeightedRandomItem(obstacleTypes), truck.position.z - 30));
             } else {
-                scene.add(createPowerUp(powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)], truck.position.z - 30));
+                scene.add(createPowerUp(getWeightedRandomItem(powerUpTypes), truck.position.z - 30));
             }
             spawnTimer = 0;
         }
@@ -4563,4 +4574,56 @@ function createCrashedTruck(distance, playerName) {
     };
     
     return crashedTruckGroup;
+}
+
+// Function to select an item based on weights
+function getWeightedRandomItem(items) {
+    // Calculate total weight
+    const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+    
+    // Get a random value between 0 and totalWeight
+    let random = Math.random() * totalWeight;
+    
+    // Find the item that corresponds to the random value
+    for (const item of items) {
+        random -= item.weight;
+        if (random <= 0) {
+            return item.type;
+        }
+    }
+    
+    // Fallback (should never reach here if weights are positive)
+    return items[0].type;
+}
+
+// Function to set the weight for a specific powerup type
+function setPowerUpWeight(powerUpType, weight) {
+    const powerUp = powerUpTypes.find(item => item.type === powerUpType);
+    if (powerUp) {
+        powerUp.weight = Math.max(0, weight); // Ensure weight is non-negative
+        console.log(`Updated ${powerUpType} weight to ${weight}`);
+    } else {
+        console.error(`PowerUp type ${powerUpType} not found`);
+    }
+}
+
+// Function to set the weight for a specific obstacle type
+function setObstacleWeight(obstacleType, weight) {
+    const obstacle = obstacleTypes.find(item => item.type === obstacleType);
+    if (obstacle) {
+        obstacle.weight = Math.max(0, weight); // Ensure weight is non-negative
+        console.log(`Updated ${obstacleType} weight to ${weight}`);
+    } else {
+        console.error(`Obstacle type ${obstacleType} not found`);
+    }
+}
+
+// Function to get current weights for all powerups and obstacles
+function getSpawnWeights() {
+    console.log("PowerUp weights:", powerUpTypes.map(p => `${p.type}: ${p.weight}`).join(', '));
+    console.log("Obstacle weights:", obstacleTypes.map(o => `${o.type}: ${o.weight}`).join(', '));
+    return {
+        powerUps: Object.fromEntries(powerUpTypes.map(p => [p.type, p.weight])),
+        obstacles: Object.fromEntries(obstacleTypes.map(o => [o.type, o.weight]))
+    };
 }
