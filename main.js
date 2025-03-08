@@ -3821,14 +3821,14 @@ function applyObstacleEffect(type) {
             displayInGameMessage("Lot lizard caused distraction! -$50 and -10 health");
             break;
         case 'lowBridge':
-            health -= 30;
-            speed = currentSpeed * 0.7; // Reduce to 70% of current speed
-            setTimeout(() => {
-                if (gameStarted && !inTruckstop) {
-                    speed = currentSpeed; // Return to the speed before the obstacle
-                }
-            }, 5000);
-            displayInGameMessage("Hit low bridge! -30 health and speed reduced for 5 seconds");
+            health -= 100;
+            // speed = currentSpeed * 0.7; // Reduce to 70% of current speed
+            // setTimeout(() => {
+            //     if (gameStarted && !inTruckstop) {
+            //         speed = currentSpeed; // Return to the speed before the obstacle
+            //     }
+            // }, 5000);
+            displayInGameMessage("Hit low bridge!");
             break;
         case 'dotOfficer':
             // Special case: If player has DEF Delete and hits DOT officer, game over!
