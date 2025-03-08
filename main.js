@@ -150,10 +150,10 @@ const rimTexture = createRimTexture();
 
 // Game state variables
 let gameStarted = false;
-let speed = 10;
-let baseSpeed = 10;
+let speed = null;
+let baseSpeed = null; //set elsewhere
 let speedIncreaseRate = 0.0005; // Speed increase per meter traveled
-let maxSpeedMultiplier = 2.5; // Maximum speed will be baseSpeed * maxSpeedMultiplier
+let maxSpeedMultiplier = 5; // Maximum speed will be baseSpeed * maxSpeedMultiplier
 let lane = 0;
 const laneWidth = 4;
 // Define lane center positions for left, center, and right lanes
@@ -275,6 +275,9 @@ function togglePause() {
 function startEndlessRunnerGame() {
     if (gameStarted) return;
     
+    // Apply difficulty settings
+    setDifficulty(difficultyLevel);
+    
     // Get player name
     let playerName = document.getElementById('player-name').value.trim();
     
@@ -303,7 +306,7 @@ function startEndlessRunnerGame() {
     fuel = 100;
     money = 0;
     lane = 0;
-    speed = 12;
+    speed = baseSpeed; // Use baseSpeed instead of hardcoded value
     distanceTraveled = 0;
     activeSegments = [];
     removedSegments = [];
@@ -366,19 +369,23 @@ function startEndlessRunnerGame() {
 function setDifficulty(level) {
     console.log("Setting difficulty to:", level);
     difficultyLevel = level;
+    
+    // Reset baseSpeed to its original value to prevent cumulative multiplications
+    baseSpeed = 10;
+    
     switch (level) {
         case 'easy':
-            baseSpeed = 8;
+            baseSpeed *= 0.7;
             earningMultiplier = 1;
             speedIncreaseRate = 0.0003; // Slower speed increase for easy mode
             break;
         case 'medium':
-            baseSpeed = 10;
+            baseSpeed *= 1;
             earningMultiplier = 1.5;
             speedIncreaseRate = 0.0005; // Medium speed increase
             break;
         case 'hard':
-            baseSpeed = 12;
+            baseSpeed *= 1.5;
             earningMultiplier = 2;
             speedIncreaseRate = 0.0008; // Faster speed increase for hard mode
             break;
@@ -1208,9 +1215,8 @@ function endlessRunnerLoop() {
             speed += speedIncreaseRate * speed * delta;
             speed = Math.min(speed, currentMaxSpeed);
         }
-        
         // Move the truck forward based on speed
-        truck.position.z -= speed * delta;
+        truck.position.z -= speed * delta * 1.5;
         
         // Use the lanePositions array to position the truck in the center of lanes
         truck.position.x = lanePositions[lane + 1]; // +1 because lane is -1, 0, or 1
