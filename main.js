@@ -9,7 +9,6 @@ document.getElementById('game').appendChild(renderer.domElement);
 // Game constants
 const billboardMessages = [
     { weight: 1, type: 'text', content: 'HELL IS REAL' },
-    { weight: 1, type: 'text', content: 'TRUCK STOP AHEAD' },
     { weight: 1, type: 'text', content: 'REST AREA 10 MILES' },
     { weight: 1, type: 'text', content: 'GAS FOOD LODGING' },
     { weight: 1, type: 'text', content: 'BROKER TRANSPARENCY NOW!' },
@@ -17,9 +16,9 @@ const billboardMessages = [
     { weight: 1, type: 'text', content: 'Strong Solo Sergey Wanted' },
     { weight: 1, type: 'text', content: 'Lip Pillows and Freedom' },
     { weight: 1, type: 'text', content: 'SAY NO TO CHEAP FREIGHT' },
-    { weight: 0.33, type: 'image', content: './billboard-images/freight360.png' },
-    { weight: 0.33, type: 'image', content: './billboard-images/loadpartner.png' },
-    { weight: 0.33, type: 'image', content: './billboard-images/wtt.jpg' },
+    { weight: 1.1, type: 'image', content: './billboard-images/freight360.png' },
+    { weight: 1.1, type: 'image', content: './billboard-images/loadpartner.png' },
+    { weight: 1.2, type: 'image', content: './billboard-images/wtt.jpg' },
 ];
 
 // Add clock for delta time calculation
@@ -152,8 +151,8 @@ const rimTexture = createRimTexture();
 let gameStarted = false;
 let speed = 10;
 let baseSpeed = 10;
-let speedIncreaseRate = 0.0005; // Speed increase per meter traveled
-let maxSpeedMultiplier = 2.5; // Maximum speed will be baseSpeed * maxSpeedMultiplier
+let speedIncreaseRate = 0.0007; // Speed increase per meter traveled
+let maxSpeedMultiplier = 3.5; // Maximum speed will be baseSpeed * maxSpeedMultiplier
 let lane = 0;
 const laneWidth = 4;
 // Define lane center positions for left, center, and right lanes
@@ -370,17 +369,17 @@ function setDifficulty(level) {
         case 'easy':
             baseSpeed = 8;
             earningMultiplier = 1;
-            speedIncreaseRate = 0.0003; // Slower speed increase for easy mode
+            speedIncreaseRate = 0.0005; // Slower speed increase for easy mode
             break;
         case 'medium':
             baseSpeed = 10;
-            earningMultiplier = 1.5;
-            speedIncreaseRate = 0.0005; // Medium speed increase
+            earningMultiplier = 2;
+            speedIncreaseRate = 0.001; // Medium speed increase
             break;
         case 'hard':
             baseSpeed = 12;
-            earningMultiplier = 2;
-            speedIncreaseRate = 0.0008; // Faster speed increase for hard mode
+            earningMultiplier = 3;
+            speedIncreaseRate = 0.0015; // Faster speed increase for hard mode
             break;
     }
     speed = baseSpeed;
