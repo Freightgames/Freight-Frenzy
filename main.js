@@ -152,8 +152,8 @@ const rimTexture = createRimTexture();
 let gameStarted = false;
 let speed = 10;
 let baseSpeed = 10;
-let speedIncreaseRate = 0.0005; // Speed increase per meter traveled
-let maxSpeedMultiplier = 2.5; // Maximum speed will be baseSpeed * maxSpeedMultiplier
+let speedIncreaseRate = 0.0007; // Speed increase per meter traveled
+let maxSpeedMultiplier = 3.5; // Maximum speed will be baseSpeed * maxSpeedMultiplier
 let lane = 0;
 const laneWidth = 4;
 // Define lane center positions for left, center, and right lanes
@@ -359,17 +359,17 @@ function setDifficulty(level) {
         case 'easy':
             baseSpeed = 8;
             earningMultiplier = 1;
-            speedIncreaseRate = 0.0003; // Slower speed increase for easy mode
+            speedIncreaseRate = 0.0005; // Slower speed increase for easy mode
             break;
         case 'medium':
             baseSpeed = 10;
-            earningMultiplier = 1.5;
-            speedIncreaseRate = 0.0005; // Medium speed increase
+            earningMultiplier = 2;
+            speedIncreaseRate = 0.001; // Medium speed increase
             break;
         case 'hard':
             baseSpeed = 12;
-            earningMultiplier = 2;
-            speedIncreaseRate = 0.0008; // Faster speed increase for hard mode
+            earningMultiplier = 3;
+            speedIncreaseRate = 0.0015; // Faster speed increase for hard mode
             break;
     }
     speed = baseSpeed;
