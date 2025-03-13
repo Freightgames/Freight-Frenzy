@@ -16,9 +16,9 @@ const billboardMessages = [
     { weight: 1, type: 'text', content: 'Strong Solo Sergey Wanted' },
     { weight: 1, type: 'text', content: 'Lip Pillows and Freedom' },
     { weight: 1, type: 'text', content: 'SAY NO TO CHEAP FREIGHT' },
-    { weight: 1.1, type: 'image', content: './billboard-images/freight360.png' },
-    { weight: 1.1, type: 'image', content: './billboard-images/loadpartner.png' },
-    { weight: 1.2, type: 'image', content: './billboard-images/wtt.jpg' },
+    { weight: 1.1, type: 'image', content: './billboard-images/freight360.png', analytics: 'freight360-billboard'},
+    { weight: 1.1, type: 'image', content: './billboard-images/loadpartner.png', analytics: 'loadpartner-billboard'},
+    { weight: 1.2, type: 'image', content: './billboard-images/wtt.jpg', analytics: 'whatthetruck-billboard'},
 ];
 
 // Add clock for delta time calculation
@@ -259,6 +259,7 @@ document.addEventListener('keydown', (event) => {
 
 // Game Functions
 function togglePause() {
+    if (!gameStarted) return;
     isPaused = !isPaused;
     if (isPaused) {
         clock.stop();
@@ -2821,6 +2822,22 @@ function createBillboard(x, z, isLeftSide = true) {
     const signGeometry = new THREE.BoxGeometry(21, 10.5, 0.4); // 50% larger (from 14x7 to 21x10.5)
     const message = getWeightedRandomBillboardMessage();
     console.log("Selected billboard message:", message);
+
+    if (message.analytics) {
+        // Record analytics event for billboard impression
+        if (typeof gtag === 'function') {
+            gtag('event', 'billboard_impression', {
+                'event_category': 'game_interaction',
+                'event_label': message.analytics,
+                'non_interaction': true
+            });
+        } else if (typeof ga === 'function') {
+            // Fallback to older analytics method if gtag isn't available
+            ga('send', 'event', 'game_interaction', 'billboard_impression', message.analytics);
+        } else {
+            console.log('Analytics event (not sent):', message.analytics);
+        }
+    }
     
     // Default texture (loading texture)
     const loadingCanvas = document.createElement('canvas');
