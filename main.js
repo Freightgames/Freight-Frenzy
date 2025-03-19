@@ -200,25 +200,63 @@ let isRefueling = false;
 let selectedTruckType = 'flipFlopSpecial'; // Default truck
 let selectedTrailerType = 'dryVan'; // Default trailer
 
-// UI Elements
-const healthElem = document.getElementById('health-value');
-const fuelElem = document.getElementById('fuel-value');
-const moneyElem = document.getElementById('money-value');
-const distanceElem = document.getElementById('distance-value');
-const speedElem = document.getElementById('speed-value');
-const truckstopMoneyElem = document.getElementById('truckstop-money');
-const finalScoreElem = document.getElementById('final-score');
+// UI Elements - Get references and check if they exist
+let healthElem, fuelElem, moneyElem, distanceElem, speedElem, truckstopMoneyElem, finalScoreElem;
+
+// Function to initialize UI elements
+function initializeUIElements() {
+    healthElem = document.getElementById('health-value');
+    fuelElem = document.getElementById('fuel-value');
+    moneyElem = document.getElementById('money-value');
+    distanceElem = document.getElementById('distance-value');
+    speedElem = document.getElementById('speed-value');
+    truckstopMoneyElem = document.getElementById('truckstop-money');
+    finalScoreElem = document.getElementById('final-score');
+    
+    // Log which elements were not found for debugging
+    if (!healthElem) console.warn("Health element not found");
+    if (!fuelElem) console.warn("Fuel element not found");
+    if (!moneyElem) console.warn("Money element not found");
+    if (!distanceElem) console.warn("Distance element not found");
+    if (!speedElem) console.warn("Speed element not found");
+    if (!truckstopMoneyElem) console.warn("Truckstop money element not found");
+    if (!finalScoreElem) console.warn("Final score element not found");
+}
+
+// Call this function when the DOM is fully loaded
+window.addEventListener('DOMContentLoaded', function() {
+    initializeUIElements();
+    console.log("UI elements initialized");
+});
 
 // Environment settings
 const regions = [
-    { groundColor: 0x3d9e41, skyColor: 0x87ceeb, name: 'Plains' },
-    { groundColor: 0x8b4513, skyColor: 0xffa07a, name: 'Desert' },
-    { groundColor: 0x228b22, skyColor: 0x4682b4, name: 'Forest' }
+    { 
+        groundColor: 0x3d9e41, 
+        skyColor: 0x87ceeb, 
+        name: 'Plains',
+        horizonType: 'hills',
+        horizonColor: 0x2d7e31
+    },
+    { 
+        groundColor: 0x8b4513, 
+        skyColor: 0xffa07a, 
+        name: 'Desert',
+        horizonType: 'mesa',
+        horizonColor: 0x7a3513
+    },
+    { 
+        groundColor: 0x228b22, 
+        skyColor: 0x4682b4, 
+        name: 'Forest',
+        horizonType: 'forest',
+        horizonColor: 0x0f5c0f
+    }
 ];
 
 // Game objects
 const powerUpTypes = [
-    { type: 'zaps', weight: 0.5 },
+    { type: 'zaps', weight: 5 },
     { type: 'energy', weight: 5 },
     { type: 'wrench', weight: 2 },
     { type: 'fuelCan', weight: 4 }
@@ -271,95 +309,151 @@ function togglePause() {
     }
 }
 
-function startEndlessRunnerGame() {
-    if (gameStarted) return;
+// Function to create UI elements if they don't exist
+function createGameUI() {
+    // Check if game UI already exists
+    let gameUI = document.getElementById('game-ui');
     
-    // Get player name
-    let playerName = document.getElementById('player-name').value.trim();
-    
-    // Default to a random trucker handle if left blank
-    if (!playerName) {
-        const randomHandles = ['RoadDog', 'BigRigBoss', 'GearJammer', 'DieselDave', 'HighwayHero', 
-                             'AsphaltCowboy', 'MileMarker', 'RubberDuck', 'NightRider', 'SmokeEater'];
-        playerName = randomHandles[Math.floor(Math.random() * randomHandles.length)] + 
-                     Math.floor(Math.random() * 99 + 1);
+    if (!gameUI) {
+        console.log("Creating game UI elements");
+        
+        // Create the main UI container
+        gameUI = document.createElement('div');
+        gameUI.id = 'game-ui';
+        gameUI.style.position = 'fixed';
+        gameUI.style.top = '10px';
+        gameUI.style.left = '10px';
+        gameUI.style.display = 'flex';
+        gameUI.style.flexDirection = 'column';
+        gameUI.style.gap = '10px';
+        gameUI.style.background = 'rgba(0, 0, 0, 0.7)';
+        gameUI.style.color = 'white';
+        gameUI.style.padding = '15px';
+        gameUI.style.borderRadius = '10px';
+        gameUI.style.zIndex = '1000';
+        gameUI.style.fontFamily = 'Arial, sans-serif';
+        document.body.appendChild(gameUI);
+        
+        // Create stat elements
+        const stats = [
+            { id: 'health', label: 'Health', value: '100' },
+            { id: 'fuel', label: 'Fuel', value: '100' },
+            { id: 'money', label: 'Money', value: '0' },
+            { id: 'distance', label: 'Distance', value: '0' },
+            { id: 'speed', label: 'Speed', value: '60' }
+        ];
+        
+        stats.forEach(stat => {
+            const statContainer = document.createElement('div');
+            statContainer.className = 'stat';
+            statContainer.style.display = 'flex';
+            statContainer.style.justifyContent = 'space-between';
+            statContainer.style.width = '200px';
+            
+            const label = document.createElement('span');
+            label.textContent = stat.label + ':';
+            label.style.fontWeight = 'bold';
+            
+            const value = document.createElement('span');
+            value.id = stat.id + '-value';
+            value.textContent = stat.value;
+            
+            statContainer.appendChild(label);
+            statContainer.appendChild(value);
+            gameUI.appendChild(statContainer);
+        });
     }
     
-    // Store the player name for later use
-    window.currentPlayerName = playerName;
+    // Re-initialize UI elements after creating them
+    initializeUIElements();
+}
+
+function startEndlessRunnerGame() {
+    // Game is already in progress
+    if (gameStarted) return;
     
-    // Hide the start screen
-    document.getElementById('start-screen').style.display = 'none';
+    console.log("Starting endless runner game");
     
-    // Show the UI
-    document.getElementById('ui').style.display = 'flex';
+    // Create UI elements if they don't exist
+    createGameUI();
     
-    // Reset game variables
+    // Check if elements exist before trying to access them
+    const startScreen = document.getElementById('start-screen');
+    if (startScreen) {
+        startScreen.style.display = 'none';
+    } else {
+        console.warn("Start screen element not found");
+    }
+    
+    const gameUI = document.getElementById('game-ui');
+    if (gameUI) {
+        gameUI.style.display = 'flex';
+    } else {
+        console.warn("Game UI element not found");
+    }
+    
     gameStarted = true;
-    inTruckstop = false;
     isPaused = false;
+    speed = baseSpeed;
     health = 100;
     fuel = 100;
     money = 0;
-    lane = 0;
-    speed = 12;
     distanceTraveled = 0;
-    activeSegments = [];
-    removedSegments = [];
-    removedSegmentTime = 0;
-    lastObstacleZ = 0;
-    lastPowerUpZ = 0;
-    regionIndex = 0;
-    regionProgressPercentage = 0;
-    truckStopFrequency = 2000; // Every 2000 units
-    nextTruckStopZ = -truckStopFrequency;
-    hasBluetooth = false;
-    hasDEFDelete = false;
-    fuelConsumptionRate = 1.0;
-    earningMultiplier = 1.0;
     
-    // Clear any active powerups from previous game
+    // Add clouds to the scene when game starts
+    const clouds = createClouds();
+    scene.add(clouds);
+    clouds.userData = { isCloudGroup: true }; // Mark for identification
+    clouds.position.z = truck.position.z - 400; // Position clouds relative to truck
+    
+    // Reset any existing powerups
     clearAllActivePowerups();
-    isZapsActive = false;
-    isInvincible = false;
     
-    // Reset crashed truck tracking
-    placedCrashedTrucks.clear();
+    // Initialize or reset region
+    regionIndex = 0;
     
-    // Sort leaderboard data by distance for easy access
-    upcomingCrashedTrucks = [...leaderboardData]
-        .map(entry => entry.distance)
-        .filter(distance => distance > 100) // Filter out very short distances
-        .sort((a, b) => a - b); // Sort in ascending order
+    // Update sky color based on region
+    scene.background = new THREE.Color(regions[regionIndex].skyColor);
     
-    // Add a test crashed truck at distance 200
-    // setTimeout(() => {
-    //     if (gameStarted) {
-    //         const testDistance = 85;
-    //         console.log("Adding test crashed truck at distance 200");
-            
-    //         // Create crashed truck
-    //         const crashedTruck = createCrashedTruck(testDistance, "Garrett");
-            
-    //         // Calculate position on the road
-    //         const zPosition = truck.position.z - ((testDistance - distanceTraveled) * 1);
-    //         crashedTruck.position.z = zPosition;
-            
-    //         // Add to scene
-    //         scene.add(crashedTruck);
-            
-    //         // Mark as placed so we don't add it again from leaderboard data
-    //         placedCrashedTrucks.add(testDistance);
-    //     }
-    // }, 3000); // Wait 3 seconds before adding test truck to ensure game is fully loaded
+    // Check if a previous leader crashed truck exists
+    const previousCrashed = scene.children.find(child => child.userData && child.userData.isCrashedLeaderboardTruck);
+    if (previousCrashed) {
+        scene.remove(previousCrashed);
+    }
     
-    // Initialize mobile controls
-    addMobileControls();
+    // Reset truck stopper variables
+    nextTruckStopDistance = 2000;
+    inTruckstop = false;
+    
+    // Reset leaderboard crashed truck tracking
+    placedCrashedTrucks = new Set();
+    upcomingCrashedTrucks = [];
+    
+    // Add mobile controls if on mobile device
+    if (window.innerWidth <= 1024) {
+        addMobileControls();
+    }
+    
+    // Initialize touch controls for mobile
     initializeTouchControls();
-    addResponsiveStyles();
-
-    // Start the game
-    animate();
+    
+    // Show explanation overlay for a few seconds the first time, explaining controls
+    const controlsOverlay = document.getElementById('controls-overlay');
+    if (controlsOverlay && localStorage.getItem('firstTimePlaying') !== 'false') {
+        controlsOverlay.style.display = 'block';
+        setTimeout(() => {
+            controlsOverlay.style.display = 'none';
+        }, 8000);
+        localStorage.setItem('firstTimePlaying', 'false');
+    }
+    
+    // Update the UI initially
+    updateUI();
+    
+    // Fetch leaderboard data to show crashed trucks from other players
+    if (typeof fetchLeaderboardData === 'function') {
+        fetchLeaderboardData();
+    }
 }
 
 function setDifficulty(level) {
@@ -386,14 +480,17 @@ function setDifficulty(level) {
 }
 
 function updateUI() {
-    healthElem.textContent = Math.floor(health);
-    fuelElem.textContent = Math.floor(fuel);
-    moneyElem.textContent = Math.floor(money);
-    distanceElem.textContent = Math.floor(distanceTraveled);
+    // Check if elements exist before updating them
+    if (healthElem) healthElem.textContent = Math.floor(health);
+    if (fuelElem) fuelElem.textContent = Math.floor(fuel);
+    if (moneyElem) moneyElem.textContent = Math.floor(money);
+    if (distanceElem) distanceElem.textContent = Math.floor(distanceTraveled);
     
     // Update speed display - convert to mph for a more realistic feel
-    const speedMph = Math.floor(speed * 6); // Simple conversion for visual purposes
-    speedElem.textContent = speedMph;
+    if (speedElem) {
+        const speedMph = Math.floor(speed * 6); // Simple conversion for visual purposes
+        speedElem.textContent = speedMph;
+    }
     
     // Update active powerups UI
     updateActivePowerupsUI();
@@ -1166,6 +1263,7 @@ function leaveTruckstop() {
                 gameStarted = true;
                 inTruckstop = false;
                 
+                
                 // Remove truck stop and lot lizard
                 scene.remove(truckStop);
                 scene.remove(offRamp);
@@ -1222,6 +1320,46 @@ function endlessRunnerLoop() {
         // Update camera position to follow the truck
         camera.position.set(truck.position.x, 8, truck.position.z + 20);
         camera.lookAt(truck.position.x, 3, truck.position.z - 10);
+        
+        // Move clouds with the player, keeping them in the background
+        scene.children.forEach(object => {
+            if (object.userData && object.userData.isCloudGroup) {
+                // Keep clouds at a fixed position relative to the camera
+                object.position.z = truck.position.z - 400;
+                
+                // Slowly drift clouds for a dynamic sky effect
+                object.children.forEach(cloudGroup => {
+                    cloudGroup.position.x += Math.sin(Date.now() * 0.0001 + cloudGroup.position.z * 0.01) * 0.05;
+                });
+            }
+        });
+        
+        // Switch regions based on distance traveled
+        if (Math.floor(distanceTraveled / 2000) > regionIndex) {
+            const oldRegionIndex = regionIndex;
+            regionIndex = Math.floor(distanceTraveled / 2000) % regions.length;
+            
+            // If region changed, update the sky color
+            if (oldRegionIndex !== regionIndex) {
+                scene.background = new THREE.Color(regions[regionIndex].skyColor);
+                
+                // Regenerate clouds for new region with different positioning
+                scene.children.forEach(object => {
+                    if (object.userData && object.userData.isCloudGroup) {
+                        scene.remove(object);
+                    }
+                });
+                
+                // Create new clouds for the new region
+                const newClouds = createClouds();
+                newClouds.userData = { isCloudGroup: true };
+                newClouds.position.z = truck.position.z - 400;
+                scene.add(newClouds);
+                
+                // Display region notification
+                displayInGameMessage(`Entering ${regions[regionIndex].name} region`);
+            }
+        }
         
         // Create new segments as needed
         while (lastSegmentZ > truck.position.z - (segmentLength * visibleSegments)) {
@@ -1311,8 +1449,18 @@ function endlessRunnerLoop() {
                 const mesh = object.children[0];
                 mesh.userData.floatAngle += delta * 2;
                 mesh.position.y = mesh.userData.baseY + Math.sin(mesh.userData.floatAngle) * 0.5;
-                mesh.userData.spinAngle += delta * 2;
-                mesh.rotation.set(0, mesh.userData.spinAngle, 0);
+                
+                if (object.userData.type === 'zaps') {
+                    // For ZAPS (ZYN can), spin around y-axis to see the label clearly
+                    mesh.userData.spinAngle += mesh.userData.spinSpeed || 0.02;
+                    mesh.rotation.y = mesh.userData.spinAngle;
+                    // Tilt slightly for better visibility
+                    mesh.rotation.x = Math.PI / 6;
+                } else {
+                    // Standard vertical spinning for other powerups
+                    mesh.userData.spinAngle += delta * 2;
+                    mesh.rotation.y = mesh.userData.spinAngle;
+                }
             }
         });
     }
@@ -1860,6 +2008,213 @@ function createTrailerBackTexture() {
     return new THREE.CanvasTexture(canvas);
 }
 
+// Function to create clouds
+function createClouds() {
+    const cloudsGroup = new THREE.Group();
+    
+    // Create 10-15 clouds at various positions
+    const cloudCount = 10 + Math.floor(Math.random() * 6);
+    
+    for (let i = 0; i < cloudCount; i++) {
+        const cloudGroup = new THREE.Group();
+        
+        // Create multiple spheres for each cloud
+        const puffCount = 2 + Math.floor(Math.random() * 4);
+        const cloudSize = 5 + Math.random() * 15;
+        
+        // Create a slightly varying cloud material
+        const whiteness = 0.9 + Math.random() * 0.1; // Between 0.9 and 1.0
+        const cloudColor = new THREE.Color(whiteness, whiteness, whiteness);
+        const cloudMaterial = new THREE.MeshPhongMaterial({ 
+            color: cloudColor, 
+            emissive: cloudColor, 
+            emissiveIntensity: 0.1,
+            flatShading: true
+        });
+        
+        for (let j = 0; j < puffCount; j++) {
+            const size = cloudSize * (0.6 + Math.random() * 0.6);
+            const cloudGeometry = new THREE.SphereGeometry(size, 7, 7);
+            const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial);
+            
+            // Position each puff within the cloud
+            const offsetX = j * size * 0.7;
+            const offsetY = Math.random() * size * 0.3;
+            const offsetZ = Math.random() * size * 0.3 - size * 0.15;
+            
+            cloud.position.set(offsetX, offsetY, offsetZ);
+            cloudGroup.add(cloud);
+        }
+        
+        // Position the cloud in the sky
+        const yPosition = 80 + Math.random() * 120; // Between 80 and 200 units high
+        const xPosition = -250 + Math.random() * 500; // Between -250 and 250 units left/right
+        const zPosition = -800 + Math.random() * 1600; // From -800 to 800 in the distance
+        
+        cloudGroup.position.set(xPosition, yPosition, zPosition);
+        
+        // Add some rotation for variety
+        cloudGroup.rotation.y = Math.random() * Math.PI * 2;
+        cloudsGroup.add(cloudGroup);
+    }
+    
+    return cloudsGroup;
+}
+
+// Function to create horizon elements based on region
+function createHorizonElements(regionType, startZ) {
+    const horizonGroup = new THREE.Group();
+    
+    switch (regionType) {
+        case 'hills':
+            // Create rolling hills
+            for (let i = 0; i < 8; i++) {
+                // Create overlapping hills with different sizes
+                const hillWidth = 150 + Math.random() * 150;
+                const hillHeight = 15 + Math.random() * 20;
+                const hillDepth = 50 + Math.random() * 70;
+                
+                // Use a custom hill shape - half ellipsoid
+                const hillGeometry = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+                hillGeometry.scale(hillWidth, hillHeight, hillDepth);
+                
+                const hillMaterial = new THREE.MeshPhongMaterial({ 
+                    color: regions.find(r => r.name === 'Plains').horizonColor,
+                    flatShading: true
+                });
+                
+                const hill = new THREE.Mesh(hillGeometry, hillMaterial);
+                
+                // Position the hill along the horizon - prevent overlap with highway
+                let hillXPosition = -300 + i * 100 + (Math.random() * 100 - 50);
+                
+                // Ensure hills don't overlap the road (road is 16 units wide)
+                // Create a gap in the middle of at least 40 units (-20 to +20)
+                if (hillXPosition > -20 && hillXPosition < 20) {
+                    if (hillXPosition > 0) {
+                        hillXPosition = 40 + Math.random() * 60; // Move to right side
+                    } else {
+                        hillXPosition = -40 - Math.random() * 60; // Move to left side
+                    }
+                }
+                
+                const hillZPosition = startZ - 300; // Behind the current segment
+                
+                hill.position.set(hillXPosition, -hillHeight * 0.95, hillZPosition);
+                horizonGroup.add(hill);
+            }
+            break;
+            
+        case 'mesa':
+            // Create desert mesas and plateaus
+            for (let i = 0; i < 5; i++) {
+                const mesaWidth = 60 + Math.random() * 100;
+                const mesaHeight = 25 + Math.random() * 35;
+                const mesaDepth = 60 + Math.random() * 100;
+                
+                // Create the base - a box with a slightly tapered shape
+                const baseGeometry = new THREE.BoxGeometry(mesaWidth, mesaHeight, mesaDepth);
+                const baseMaterial = new THREE.MeshPhongMaterial({ 
+                    color: regions.find(r => r.name === 'Desert').horizonColor,
+                    flatShading: true
+                });
+                
+                const mesa = new THREE.Mesh(baseGeometry, baseMaterial);
+                
+                // Add a second smaller box on top sometimes
+                if (Math.random() > 0.5) {
+                    const topWidth = mesaWidth * (0.5 + Math.random() * 0.3);
+                    const topHeight = mesaHeight * (0.3 + Math.random() * 0.2);
+                    const topDepth = mesaDepth * (0.5 + Math.random() * 0.3);
+                    
+                    const topGeometry = new THREE.BoxGeometry(topWidth, topHeight, topDepth);
+                    const top = new THREE.Mesh(topGeometry, baseMaterial);
+                    
+                    top.position.y = mesaHeight / 2 + topHeight / 2;
+                    mesa.add(top);
+                }
+                
+                // Position the mesa along the horizon - prevent overlap with road
+                let xPosition = -250 + i * 120 + (Math.random() * 60 - 30);
+                
+                // Ensure mesas don't overlap the road
+                if (xPosition > -40 && xPosition < 40) {
+                    if (xPosition > 0) {
+                        xPosition = 40 + Math.random() * 80; // Move to right side
+                    } else {
+                        xPosition = -40 - Math.random() * 80; // Move to left side
+                    }
+                }
+                
+                const zPosition = startZ - 350 - Math.random() * 150; // Further back
+                
+                mesa.position.set(xPosition, -mesaHeight / 2, zPosition);
+                horizonGroup.add(mesa);
+            }
+            break;
+            
+        case 'forest':
+            // Create a dense forest line
+            const forestLineLength = 800; // Length of the forest line
+            const forestSegments = 20; // Number of segments
+            const segmentLength = forestLineLength / forestSegments;
+            
+            for (let i = 0; i < forestSegments; i++) {
+                // Create clumps of trees
+                const clumpWidth = segmentLength * 1.2;
+                const treeCount = 4 + Math.floor(Math.random() * 4);
+                
+                for (let j = 0; j < treeCount; j++) {
+                    // Create a simple conifer shape (cone + cylinder)
+                    const trunkGeometry = new THREE.CylinderGeometry(1, 1.2, 3, 6);
+                    const trunkMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0x3d2817, 
+                        flatShading: true 
+                    });
+                    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                    
+                    const foliageHeight = 8 + Math.random() * 7;
+                    const foliageGeometry = new THREE.ConeGeometry(3 + Math.random() * 2, foliageHeight, 6);
+                    const foliageMaterial = new THREE.MeshPhongMaterial({ 
+                        color: regions.find(r => r.name === 'Forest').horizonColor, 
+                        flatShading: true 
+                    });
+                    const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                    
+                    foliage.position.y = foliageHeight / 2 + 1.5;
+                    
+                    const tree = new THREE.Group();
+                    tree.add(trunk);
+                    tree.add(foliage);
+                    
+                    // Random position within the clump, ensuring no trees are on the road
+                    let treeX = -forestLineLength/2 + i * segmentLength + Math.random() * clumpWidth - clumpWidth/2;
+                    
+                    // Ensure trees don't overlap the road
+                    if (treeX > -40 && treeX < 40) {
+                        if (treeX > 0) {
+                            treeX = 40 + Math.random() * 50;
+                        } else {
+                            treeX = -40 - Math.random() * 50;
+                        }
+                    }
+                    
+                    const treeZ = startZ - 300 - Math.random() * 80;
+                    
+                    // Random scale
+                    const treeScale = 2 + Math.random() * 2;
+                    tree.scale.set(treeScale, treeScale, treeScale);
+                    
+                    tree.position.set(treeX, 0, treeZ);
+                    horizonGroup.add(tree);
+                }
+            }
+            break;
+    }
+    
+    return horizonGroup;
+}
+
 function createHighwaySegment(zPosition) {
     const segment = new THREE.Group();
     segment.userData = { z: zPosition };
@@ -1878,6 +2233,7 @@ function createHighwaySegment(zPosition) {
     const road = new THREE.Mesh(roadGeometry, roadMaterial);
     road.rotation.x = -Math.PI / 2;
     road.position.z = zPosition + segmentLength / 2;
+    road.position.y = 0.01; // Slightly above ground to prevent z-fighting
     road.receiveShadow = true;
     segment.add(road);
     
@@ -1886,23 +2242,35 @@ function createHighwaySegment(zPosition) {
     const shoulderMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
     const leftShoulder = new THREE.Mesh(leftShoulderGeometry, shoulderMaterial);
     leftShoulder.rotation.x = -Math.PI / 2;
-    leftShoulder.position.set(-7, 0.01, zPosition + segmentLength / 2);
+    leftShoulder.position.set(-7, 0.02, zPosition + segmentLength / 2);
     segment.add(leftShoulder);
     
     const rightShoulderGeometry = new THREE.PlaneGeometry(2, segmentLength);
     const rightShoulder = new THREE.Mesh(rightShoulderGeometry, shoulderMaterial);
     rightShoulder.rotation.x = -Math.PI / 2;
-    rightShoulder.position.set(7, 0.01, zPosition + segmentLength / 2);
+    rightShoulder.position.set(7, 0.02, zPosition + segmentLength / 2);
     segment.add(rightShoulder);
     
-    const groundGeometry = new THREE.PlaneGeometry(100, segmentLength);
+    // Create two ground planes instead of one with an alpha map to avoid WebGL security issues
+    // Left ground plane
+    const leftGroundGeometry = new THREE.PlaneGeometry(40, segmentLength);
     const groundMaterial = new THREE.MeshPhongMaterial({ color: regions[regionIndex].groundColor });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.z = zPosition + segmentLength / 2;
-    ground.position.y = -0.1;
-    ground.receiveShadow = true;
-    segment.add(ground);
+    const leftGround = new THREE.Mesh(leftGroundGeometry, groundMaterial);
+    leftGround.rotation.x = -Math.PI / 2;
+    leftGround.position.set(-28, -0.02, zPosition + segmentLength / 2);
+    leftGround.receiveShadow = true;
+    segment.add(leftGround);
+    
+    // Right ground plane
+    const rightGroundGeometry = new THREE.PlaneGeometry(40, segmentLength);
+    const rightGround = new THREE.Mesh(rightGroundGeometry, groundMaterial);
+    rightGround.rotation.x = -Math.PI / 2;
+    rightGround.position.set(28, -0.02, zPosition + segmentLength / 2);
+    rightGround.receiveShadow = true;
+    segment.add(rightGround);
+    
+    // Add horizon elements based on current region
+    segment.add(createHorizonElements(regions[regionIndex].horizonType, zPosition));
     
     // Create white lane markings every 5 units with more realistic dimensions
     for (let i = 0; i < segmentLength; i += 5) {
@@ -2109,10 +2477,20 @@ function addEnvironmentalElements(segment, zPosition, segmentLength) {
     if (Math.random() < 0.08 && !hasBillboards) { // Reduced from 0.15
         const building = createBuilding();
         const side = Math.random() > 0.5 ? -1 : 1;
-        const distanceFromRoad = 35 + Math.random() * 40; // Pushed further back
+        
+        // Road width is 16 units
+        // Ensure buildings are placed well away from the road
+        const minDistanceFromRoad = 25; // Increased from 12 to 25
+        const maxDistanceFromRoad = 45; // Increased from 40 to 45
+        
+        // Random distance within the valid range - use side to determine left/right positioning
+        const distanceFromRoad = minDistanceFromRoad + Math.random() * (maxDistanceFromRoad - minDistanceFromRoad);
+        
         const xPos = side * distanceFromRoad;
         const zPos = zPosition + Math.random() * segmentLength;
-        building.position.set(xPos, 0, zPos);
+        
+        // Position the building on the ground (ground is at y=-0.1)
+        building.position.set(xPos, -0.1, zPos);
         segment.add(building);
     }
     
@@ -2376,9 +2754,23 @@ function createBuilding() {
     );
     const buildingMaterial = new THREE.MeshPhongMaterial({ color: buildingType.color });
     const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+    
+    // Ensure building sits exactly on the ground by setting y to half its height
+    // The ground in the highway segment is at y=-0.1
     building.position.y = buildingType.height / 2;
     building.castShadow = true;
     buildingGroup.add(building);
+    
+    // Add a small foundation extending below the building to ensure it appears grounded
+    const foundationGeometry = new THREE.BoxGeometry(
+        buildingType.width + 2,  // Slightly wider than the building
+        0.5,                    // Small height foundation
+        buildingType.depth + 2  // Slightly deeper than the building
+    );
+    const foundationMaterial = new THREE.MeshPhongMaterial({ color: 0x555555 });
+    const foundation = new THREE.Mesh(foundationGeometry, foundationMaterial);
+    foundation.position.y = -buildingType.height / 2 - 0.25; // Position just below the building
+    buildingGroup.add(foundation);
     
     // Add roof based on building type
     if (buildingType.name === 'house') {
@@ -2953,66 +3345,53 @@ function createZapsTexture() {
     canvas.width = 256;
     canvas.height = 256;
     const context = canvas.getContext('2d');
-    
-    // Clear background
-    context.fillStyle = 'rgba(0, 0, 0, 0)';
+
+    // White background
+    context.fillStyle = '#FFFFFF';
     context.fillRect(0, 0, 256, 256);
-    
-    // Draw the white cylindrical can
+
+    // Draw the main circular puck shape 
     context.fillStyle = '#FFFFFF';
-    context.strokeStyle = '#CCCCCC';
-    context.lineWidth = 3;
     
-    // Main can body
+    // Outer ring (white edge)
     context.beginPath();
-    context.rect(78, 50, 100, 180);
+    context.arc(128, 128, 110, 0, Math.PI * 2);
     context.fill();
+    context.strokeStyle = '#000000';
+    context.lineWidth = 2;
     context.stroke();
     
-    // Can top
+    // Inner green circular area
     context.beginPath();
-    context.ellipse(128, 50, 50, 15, 0, 0, Math.PI * 2);
+    context.arc(128, 128, 90, 0, Math.PI * 2);
+    context.fillStyle = '#005C38'; // Dark green like ZYN
     context.fill();
+    
+    // Green ring around the inner circle
+    context.beginPath();
+    context.arc(128, 128, 100, 0, Math.PI * 2);
+    context.strokeStyle = '#00AA4F'; // Brighter green ring
+    context.lineWidth = 4;
     context.stroke();
-    
-    // Can bottom
-    context.beginPath();
-    context.ellipse(128, 230, 50, 15, 0, 0, Math.PI * 2);
-    context.fill();
-    context.stroke();
-    
-    // Add green stripe
-    context.fillStyle = '#00AA00';
-    context.beginPath();
-    context.rect(78, 90, 100, 40);
-    context.fill();
-    
-    // Add ZAPS text on the green stripe
-    context.font = 'bold 35px Arial';
-    context.fillStyle = '#FFFFFF';
+
+    // Add "ZAPS" text in large white letters
+    context.font = 'bold 50px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
+    context.fillStyle = '#FFFFFF';
     context.fillText('ZAPS', 128, 110);
     
-    // Add a highlight for a metallic look
-    context.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    context.beginPath();
-    context.rect(93, 50, 15, 180);
-    context.fill();
+    // Add "WINTERGREEN" text below
+    context.font = 'bold 16px Arial';
+    context.fillStyle = '#FFFFFF';
+    context.fillText('WINTERGREEN', 128, 150);
     
-    // Add a shadow
-    context.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    context.beginPath();
-    context.rect(148, 50, 15, 180);
-    context.fill();
-    
-    // Add a pull-tab at the top
-    context.fillStyle = '#DDDDDD';
-    context.beginPath();
-    context.rect(118, 35, 20, 10);
-    context.fill();
-    context.stroke();
-    
+    // Add "6" with "MG" in the bottom right
+    context.font = 'bold 30px Arial';
+    context.fillText('6', 180, 128);
+    context.font = 'bold 12px Arial';
+    context.fillText('MG', 180, 145);
+
     return new THREE.CanvasTexture(canvas);
 }
 
@@ -3104,57 +3483,108 @@ function createWrenchTexture() {
     context.fillStyle = 'rgba(0, 0, 0, 0)';
     context.fillRect(0, 0, 256, 256);
     
-    // Set metallic silver color for the wrench
-    context.fillStyle = '#B0B0B0';
-    context.strokeStyle = '#808080';
-    context.lineWidth = 3;
+    // Set bright chrome/silver color for the wrench with high contrast against asphalt
+    const mainColor = '#E0E8F0'; // Bright silver/chrome
+    const outlineColor = '#2B4C7E'; // Dark blue outline for contrast
+    const highlightColor = '#FFFFFF'; // White highlight for metallic effect
+    const shadowColor = '#0A2463'; // Deep blue shadow
     
-    // Draw the wrench handle
+    context.lineWidth = 4;
+    context.strokeStyle = outlineColor;
+    
+    // Create a more realistic wrench shape - combination wrench with open-end and box-end
+    
+    // Start with a gradient fill for metallic look - reduced brightness
+    const gradient = context.createLinearGradient(100, 0, 160, 256);
+    gradient.addColorStop(0, mainColor);
+    gradient.addColorStop(0.3, '#F0F0F0');  // Toned down highlight
+    gradient.addColorStop(0.5, mainColor);
+    gradient.addColorStop(0.7, shadowColor);
+    gradient.addColorStop(1, mainColor);
+    context.fillStyle = gradient;
+    
+    // Draw wrench handle with slight curve
     context.beginPath();
-    context.rect(113, 70, 30, 150);
+    context.moveTo(118, 85);  // Top of handle, just below open-end
+    context.bezierCurveTo(110, 145, 110, 180, 115, 200); // Left curve of handle
+    context.lineTo(140, 200); // Bottom width of handle
+    context.bezierCurveTo(145, 180, 145, 145, 137, 85); // Right curve of handle
+    context.closePath();
     context.fill();
     context.stroke();
     
-    // Draw the top open-end part of the wrench
+    // Draw the open-end head (top of wrench)
     context.beginPath();
-    context.arc(128, 50, 40, 0, Math.PI * 2);
+    // Left outside of open-end
+    context.moveTo(118, 85);
+    context.bezierCurveTo(100, 70, 85, 60, 90, 40);
+    context.lineTo(105, 30);
+    // Inside of open-end
+    context.lineTo(115, 45);
+    context.lineTo(140, 45);
+    // Right outside of open-end
+    context.lineTo(150, 30);
+    context.bezierCurveTo(165, 60, 150, 70, 137, 85);
+    context.closePath();
     context.fill();
     context.stroke();
     
-    // Cut out the inner circle to create the open-end
+    // Draw the box-end (bottom of wrench)
+    context.beginPath();
+    // Connect from the handle
+    context.moveTo(115, 200);
+    context.bezierCurveTo(110, 220, 105, 225, 100, 235);
+    // Draw the box hexagon shape
+    context.lineTo(105, 250);
+    context.lineTo(150, 250);
+    context.lineTo(155, 235);
+    context.bezierCurveTo(150, 225, 145, 220, 140, 200);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    
+    // Add inner hexagon cutout in the box-end
     context.fillStyle = 'rgba(0, 0, 0, 0)';
     context.globalCompositeOperation = 'destination-out';
     context.beginPath();
-    context.arc(128, 50, 25, 0, Math.PI * 2);
+    context.moveTo(119, 232);
+    context.lineTo(119, 243);
+    context.lineTo(127, 248);
+    context.lineTo(137, 243);
+    context.lineTo(137, 232);
+    context.lineTo(127, 227);
+    context.closePath();
     context.fill();
     context.globalCompositeOperation = 'source-over';
     
-    // Draw the open slot at the top
-    context.fillStyle = 'rgba(0, 0, 0, 0)';
-    context.globalCompositeOperation = 'destination-out';
+    // Add highlight for metallic look
+    context.fillStyle = 'rgba(255, 255, 255, 0.6)';
     context.beginPath();
-    context.rect(108, 10, 40, 40);
+    context.moveTo(118, 85);
+    context.bezierCurveTo(115, 145, 115, 180, 118, 200);
+    context.lineTo(125, 200);
+    context.bezierCurveTo(122, 180, 122, 145, 125, 85);
+    context.closePath();
     context.fill();
+    
+    // Add a bright yellow glow around the wrench for visibility
+    context.globalCompositeOperation = 'destination-over';
+    const glowGradient = context.createRadialGradient(128, 128, 50, 128, 128, 120);
+    glowGradient.addColorStop(0, 'rgba(255, 217, 0, 0.46)'); // Gold glow
+    glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    context.fillStyle = glowGradient;
+    context.fillRect(0, 0, 256, 256);
+    
+    // Add text indicator
     context.globalCompositeOperation = 'source-over';
-    
-    // Draw the bottom part (box-end) of the wrench
-    context.fillStyle = '#B0B0B0';
-    context.beginPath();
-    context.rect(103, 220, 50, 30);
-    context.fill();
-    context.stroke();
-    
-    // Add highlights for metallic look
-    context.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    context.beginPath();
-    context.rect(118, 70, 10, 150);
-    context.fill();
-    
-    // Add shadow
-    context.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    context.beginPath();
-    context.rect(133, 70, 5, 150);
-    context.fill();
+    context.font = 'bold 20px Arial';
+    context.fillStyle = '#FFA500'; // Orange text
+    context.strokeStyle = '#000000';
+    context.lineWidth = 2;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.strokeText('REPAIR', 128, 160);
+    context.fillText('REPAIR', 128, 160);
     
     return new THREE.CanvasTexture(canvas);
 }
@@ -3182,7 +3612,8 @@ function createPowerUp(type, zPosition) {
     let geometry, material;
     switch (type) {
         case 'zaps':
-            geometry = new THREE.CylinderGeometry(0.8, 0.8, 0.6, 16);
+            // Changed to hockey puck shape (short cylinder)
+            geometry = new THREE.CylinderGeometry(1.0, 1.0, 0.3, 32);
             material = new THREE.MeshPhongMaterial({ map: createZapsTexture(), shininess: 50 });
             break;
         case 'energy':
@@ -3190,8 +3621,27 @@ function createPowerUp(type, zPosition) {
             material = new THREE.MeshPhongMaterial({ map: createEnergyTexture(), shininess: 50 });
             break;
         case 'wrench':
-            geometry = new THREE.BoxGeometry(0.4, 2, 0.4);
-            material = new THREE.MeshPhongMaterial({ map: createWrenchTexture(), shininess: 100 });
+            // Use a plane geometry instead of box to better display the detailed texture
+            geometry = new THREE.PlaneGeometry(1.54, 3.08); // 10% larger than original 1.4 x 2.8
+            material = new THREE.MeshPhongMaterial({ 
+                map: createWrenchTexture(), 
+                transparent: true, 
+                shininess: 100,
+                emissive: 0xFFD700,
+                emissiveIntensity: 0.2
+            });
+            // Create a second plane rotated 90 degrees for visibility from all angles
+            const secondGeometry = new THREE.PlaneGeometry(1.54, 3.08); // 10% larger than original 1.4 x 2.8
+            const secondMaterial = new THREE.MeshPhongMaterial({ 
+                map: createWrenchTexture(), 
+                transparent: true, 
+                shininess: 100,
+                emissive: 0xFFD700,
+                emissiveIntensity: 0.2
+            });
+            const secondPlane = new THREE.Mesh(secondGeometry, secondMaterial);
+            secondPlane.rotation.y = Math.PI / 2;
+            powerUpGroup.add(secondPlane);
             break;
         case 'fuelCan':
             geometry = new THREE.BoxGeometry(1.2, 1.5, 1);
@@ -3205,12 +3655,25 @@ function createPowerUp(type, zPosition) {
         floatAngle: Math.random() * Math.PI * 2,
         spinAngle: 0
     };
+    
+    // For ZAPS, add custom spin speed but don't rotate here (handled in animation loop)
+    if (type === 'zaps') {
+        powerUpMesh.userData.spinSpeed = 0.02;
+    }
+    
     powerUpGroup.add(powerUpMesh);
     
     // Choose a random lane (-1, 0, 1) and use the lanePositions array to place in center of lane
     const laneIndex = Math.floor(Math.random() * 3);
     const lane = laneIndex - 1; // Convert to -1, 0, 1
-    powerUpGroup.position.set(lanePositions[laneIndex], 2, zPosition);
+    
+    // Position the power-up in the lane with adjusted height based on type
+    let yPosition = 2; // Default height
+    if (type === 'wrench') {
+        yPosition = 3; // Higher position specifically for wrench
+    }
+    
+    powerUpGroup.position.set(lanePositions[laneIndex], yPosition, zPosition);
     
     return powerUpGroup;
 }
