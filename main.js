@@ -226,7 +226,7 @@ function initializeUIElements() {
 // Call this function when the DOM is fully loaded
 window.addEventListener('DOMContentLoaded', function() {
     initializeUIElements();
-    console.log("UI elements initialized");
+    console.log("UI elements initialized on DOMContentLoaded");
 });
 
 // Environment settings
@@ -366,94 +366,111 @@ function createGameUI() {
     
     // Re-initialize UI elements after creating them
     initializeUIElements();
+    console.log("UI elements re-initialized after creating game UI");
 }
 
 function startEndlessRunnerGame() {
-    // Game is already in progress
     if (gameStarted) return;
     
-    console.log("Starting endless runner game");
+    // Get player name
+    let playerName = document.getElementById('player-name').value.trim();
     
-    // Create UI elements if they don't exist
-    createGameUI();
-    
-    // Check if elements exist before trying to access them
-    const startScreen = document.getElementById('start-screen');
-    if (startScreen) {
-        startScreen.style.display = 'none';
-    } else {
-        console.warn("Start screen element not found");
+    // Default to a random trucker handle if left blank
+    if (!playerName) {
+        const randomHandles = ['RoadDog', 'BigRigBoss', 'GearJammer', 'DieselDave', 'HighwayHero', 
+                             'AsphaltCowboy', 'MileMarker', 'RubberDuck', 'NightRider', 'SmokeEater'];
+        playerName = randomHandles[Math.floor(Math.random() * randomHandles.length)] + 
+                     Math.floor(Math.random() * 99 + 1);
     }
     
-    const gameUI = document.getElementById('game-ui');
-    if (gameUI) {
-        gameUI.style.display = 'flex';
-    } else {
-        console.warn("Game UI element not found");
-    }
+    // Store the player name for later use
+    window.currentPlayerName = playerName;
     
+    // Hide the start screen
+    document.getElementById('start-screen').style.display = 'none';
+    
+    // Show the UI
+    const uiElement = document.getElementById('ui');
+    if (uiElement) uiElement.style.display = 'flex';
+    
+    // Make sure UI elements are initialized - important to call again here
+    initializeUIElements();
+    console.log("UI elements initialized on game start");
+
+    // Reset game variables
     gameStarted = true;
+    inTruckstop = false;
     isPaused = false;
-    speed = baseSpeed;
     health = 100;
     fuel = 100;
     money = 0;
+    lane = 0;
+    speed = 12;
     distanceTraveled = 0;
-    
-    // Add clouds to the scene when game starts
-    const clouds = createClouds();
-    scene.add(clouds);
-    clouds.userData = { isCloudGroup: true }; // Mark for identification
-    clouds.position.z = truck.position.z - 400; // Position clouds relative to truck
-    
-    // Reset any existing powerups
-    clearAllActivePowerups();
-    
-    // Initialize or reset region
+    activeSegments = [];
+    removedSegments = [];
+    removedSegmentTime = 0;
+    lastObstacleZ = 0;
+    lastPowerUpZ = 0;
     regionIndex = 0;
+    regionProgressPercentage = 0;
+    truckStopFrequency = 2000; // Every 2000 units
+    nextTruckStopZ = -truckStopFrequency;
+    hasBluetooth = false;
+    hasDEFDelete = false;
+    fuelConsumptionRate = 1.0;
+    earningMultiplier = 1.0;
     
-    // Update sky color based on region
-    scene.background = new THREE.Color(regions[regionIndex].skyColor);
+    // Clear any active powerups from previous game
+    clearAllActivePowerups();
+    isZapsActive = false;
+    isInvincible = false;
     
-    // Check if a previous leader crashed truck exists
-    const previousCrashed = scene.children.find(child => child.userData && child.userData.isCrashedLeaderboardTruck);
-    if (previousCrashed) {
-        scene.remove(previousCrashed);
-    }
+    // Reset crashed truck tracking
+    placedCrashedTrucks.clear();
     
-    // Reset truck stopper variables
-    nextTruckStopDistance = 2000;
-    inTruckstop = false;
+    // Sort leaderboard data by distance for easy access
+    upcomingCrashedTrucks = [...leaderboardData]
+        .map(entry => entry.distance)
+        .filter(distance => distance > 100) // Filter out very short distances
+        .sort((a, b) => a - b); // Sort in ascending order
     
-    // Reset leaderboard crashed truck tracking
-    placedCrashedTrucks = new Set();
-    upcomingCrashedTrucks = [];
-    
-    // Add mobile controls if on mobile device
-    if (window.innerWidth <= 1024) {
-        addMobileControls();
-    }
-    
-    // Initialize touch controls for mobile
+    // Initialize mobile controls
+    addMobileControls();
     initializeTouchControls();
-    
-    // Show explanation overlay for a few seconds the first time, explaining controls
-    const controlsOverlay = document.getElementById('controls-overlay');
-    if (controlsOverlay && localStorage.getItem('firstTimePlaying') !== 'false') {
-        controlsOverlay.style.display = 'block';
-        setTimeout(() => {
-            controlsOverlay.style.display = 'none';
-        }, 8000);
-        localStorage.setItem('firstTimePlaying', 'false');
-    }
-    
-    // Update the UI initially
+    addResponsiveStyles();
+
+    // Create UI elements if they don't exist
+    createGameUI();
+
+    // Update UI immediately
     updateUI();
+
+    // Start the game
+    animate();
+}
+
+// Function to initialize UI element references
+function initializeUIElements() {
+    console.log("Initializing UI elements");
     
-    // Fetch leaderboard data to show crashed trucks from other players
-    if (typeof fetchLeaderboardData === 'function') {
-        fetchLeaderboardData();
-    }
+    // Re-assign UI element references to global variables
+    healthElem = document.getElementById('health-value');
+    fuelElem = document.getElementById('fuel-value');
+    moneyElem = document.getElementById('money-value');
+    distanceElem = document.getElementById('distance-value');
+    speedElem = document.getElementById('speed-value');
+    truckstopMoneyElem = document.getElementById('truckstop-money');
+    finalScoreElem = document.getElementById('final-score');
+    
+    // Check if all the required UI elements are present
+    if (!healthElem) console.warn("Health value element not found");
+    if (!fuelElem) console.warn("Fuel value element not found");
+    if (!moneyElem) console.warn("Money value element not found");
+    if (!distanceElem) console.warn("Distance value element not found");
+    if (!speedElem) console.warn("Speed value element not found");
+    
+    console.log("UI elements initialized");
 }
 
 function setDifficulty(level) {
@@ -480,17 +497,14 @@ function setDifficulty(level) {
 }
 
 function updateUI() {
-    // Check if elements exist before updating them
     if (healthElem) healthElem.textContent = Math.floor(health);
     if (fuelElem) fuelElem.textContent = Math.floor(fuel);
     if (moneyElem) moneyElem.textContent = Math.floor(money);
     if (distanceElem) distanceElem.textContent = Math.floor(distanceTraveled);
     
     // Update speed display - convert to mph for a more realistic feel
-    if (speedElem) {
-        const speedMph = Math.floor(speed * 6); // Simple conversion for visual purposes
-        speedElem.textContent = speedMph;
-    }
+    const speedMph = Math.floor(speed * 6); // Simple conversion for visual purposes
+    if (speedElem) speedElem.textContent = speedMph;
     
     // Update active powerups UI
     updateActivePowerupsUI();
@@ -650,7 +664,9 @@ function clearAllActivePowerups() {
 function gameOver() {
     console.log("Game over!");
     gameStarted = false;
-    document.getElementById('game-over').style.display = 'block';
+    
+    const gameOverElement = document.getElementById('game-over');
+    if (gameOverElement) gameOverElement.style.display = 'block';
     
     // Calculate distance and money
     const finalDistance = Math.floor(distanceTraveled);
@@ -660,8 +676,10 @@ function gameOver() {
     const rpm = finalDistance > 0 ? (finalMoney / finalDistance).toFixed(2) : 0;
     
     // Update final score display
-    finalScoreElem.textContent = `Distance: ${finalDistance}m | Money: $${finalMoney}`;
-    document.getElementById('rpm-score').textContent = `Rate per Mile: $${rpm}`;
+    if (finalScoreElem) finalScoreElem.textContent = `Distance: ${finalDistance}m | Money: $${finalMoney}`;
+    
+    const rpmScoreElem = document.getElementById('rpm-score');
+    if (rpmScoreElem) rpmScoreElem.textContent = `Rate per Mile: $${rpm}`;
     
     // Clear all active powerups
     clearAllActivePowerups();
@@ -1445,21 +1463,29 @@ function endlessRunnerLoop() {
         
         // Animate collectibles
         scene.traverse(object => {
-            if (object.userData.isCollectible) {
+            if (object.userData && object.userData.isCollectible) {
                 const mesh = object.children[0];
-                mesh.userData.floatAngle += delta * 2;
-                mesh.position.y = mesh.userData.baseY + Math.sin(mesh.userData.floatAngle) * 0.5;
-                
-                if (object.userData.type === 'zaps') {
-                    // For ZAPS (ZYN can), spin around y-axis to see the label clearly
-                    mesh.userData.spinAngle += mesh.userData.spinSpeed || 0.02;
-                    mesh.rotation.y = mesh.userData.spinAngle;
-                    // Tilt slightly for better visibility
-                    mesh.rotation.x = Math.PI / 6;
-                } else {
-                    // Standard vertical spinning for other powerups
-                    mesh.userData.spinAngle += delta * 2;
-                    mesh.rotation.y = mesh.userData.spinAngle;
+                if (mesh && mesh.userData) {
+                    // Update the floating animation
+                    if (typeof mesh.userData.floatAngle !== 'undefined') {
+                        mesh.userData.floatAngle += delta * 2;
+                        mesh.position.y = mesh.userData.baseY + Math.sin(mesh.userData.floatAngle) * 0.5;
+                    }
+                    
+                    // Update the spinning animation based on powerup type
+                    if (object.userData.type === 'zaps') {
+                        if (typeof mesh.userData.spinAngle !== 'undefined') {
+                            mesh.userData.spinAngle += mesh.userData.spinSpeed || 0.02;
+                            mesh.rotation.y = mesh.userData.spinAngle;
+                            mesh.rotation.x = Math.PI / 6; // Tilt ZAPS can for better visibility
+                        }
+                    } else {
+                        // Standard spinning for other powerups
+                        if (typeof mesh.userData.spinAngle !== 'undefined') {
+                            mesh.userData.spinAngle += delta * 2;
+                            mesh.rotation.y = mesh.userData.spinAngle;
+                        }
+                    }
                 }
             }
         });
@@ -2065,17 +2091,23 @@ function createClouds() {
 function createHorizonElements(regionType, startZ) {
     const horizonGroup = new THREE.Group();
     
+    // For performance optimization, reduce complexity based on distance from road
+    const farDistance = Math.abs(startZ) > 500;
+    // Use lower polygon counts for distant objects
+    const detailLevel = farDistance ? 4 : 8;
+    
     switch (regionType) {
         case 'hills':
-            // Create rolling hills
-            for (let i = 0; i < 8; i++) {
+            // Create fewer hills for better performance
+            const hillCount = farDistance ? 3 : 5;
+            for (let i = 0; i < hillCount; i++) {
                 // Create overlapping hills with different sizes
                 const hillWidth = 150 + Math.random() * 150;
                 const hillHeight = 15 + Math.random() * 20;
                 const hillDepth = 50 + Math.random() * 70;
                 
                 // Use a custom hill shape - half ellipsoid
-                const hillGeometry = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+                const hillGeometry = new THREE.SphereGeometry(1, detailLevel, Math.max(4, detailLevel/2), 0, Math.PI * 2, 0, Math.PI / 2);
                 hillGeometry.scale(hillWidth, hillHeight, hillDepth);
                 
                 const hillMaterial = new THREE.MeshPhongMaterial({ 
@@ -2086,7 +2118,7 @@ function createHorizonElements(regionType, startZ) {
                 const hill = new THREE.Mesh(hillGeometry, hillMaterial);
                 
                 // Position the hill along the horizon - prevent overlap with highway
-                let hillXPosition = -300 + i * 100 + (Math.random() * 100 - 50);
+                let hillXPosition = -300 + i * 150 + (Math.random() * 100 - 50);
                 
                 // Ensure hills don't overlap the road (road is 16 units wide)
                 // Create a gap in the middle of at least 40 units (-20 to +20)
@@ -2106,14 +2138,15 @@ function createHorizonElements(regionType, startZ) {
             break;
             
         case 'mesa':
-            // Create desert mesas and plateaus
-            for (let i = 0; i < 5; i++) {
+            // Create fewer mesas for better performance
+            const mesaCount = farDistance ? 2 : 3;
+            for (let i = 0; i < mesaCount; i++) {
                 const mesaWidth = 60 + Math.random() * 100;
                 const mesaHeight = 25 + Math.random() * 35;
                 const mesaDepth = 60 + Math.random() * 100;
                 
                 // Create the base - a box with a slightly tapered shape
-                const baseGeometry = new THREE.BoxGeometry(mesaWidth, mesaHeight, mesaDepth);
+                const baseGeometry = new THREE.BoxGeometry(mesaWidth, mesaHeight, mesaDepth, 1, 1, 1);
                 const baseMaterial = new THREE.MeshPhongMaterial({ 
                     color: regions.find(r => r.name === 'Desert').horizonColor,
                     flatShading: true
@@ -2121,13 +2154,13 @@ function createHorizonElements(regionType, startZ) {
                 
                 const mesa = new THREE.Mesh(baseGeometry, baseMaterial);
                 
-                // Add a second smaller box on top sometimes
-                if (Math.random() > 0.5) {
+                // Add a second smaller box on top sometimes (but not for distant mesas to save performance)
+                if (!farDistance && Math.random() > 0.5) {
                     const topWidth = mesaWidth * (0.5 + Math.random() * 0.3);
                     const topHeight = mesaHeight * (0.3 + Math.random() * 0.2);
                     const topDepth = mesaDepth * (0.5 + Math.random() * 0.3);
                     
-                    const topGeometry = new THREE.BoxGeometry(topWidth, topHeight, topDepth);
+                    const topGeometry = new THREE.BoxGeometry(topWidth, topHeight, topDepth, 1, 1, 1);
                     const top = new THREE.Mesh(topGeometry, baseMaterial);
                     
                     top.position.y = mesaHeight / 2 + topHeight / 2;
@@ -2135,7 +2168,7 @@ function createHorizonElements(regionType, startZ) {
                 }
                 
                 // Position the mesa along the horizon - prevent overlap with road
-                let xPosition = -250 + i * 120 + (Math.random() * 60 - 30);
+                let xPosition = -250 + i * 180 + (Math.random() * 60 - 30);
                 
                 // Ensure mesas don't overlap the road
                 if (xPosition > -40 && xPosition < 40) {
@@ -2154,19 +2187,19 @@ function createHorizonElements(regionType, startZ) {
             break;
             
         case 'forest':
-            // Create a dense forest line
+            // Create a less dense forest line for better performance
             const forestLineLength = 800; // Length of the forest line
-            const forestSegments = 20; // Number of segments
+            const forestSegments = farDistance ? 8 : 12; // Fewer segments for distant forests
             const segmentLength = forestLineLength / forestSegments;
             
             for (let i = 0; i < forestSegments; i++) {
                 // Create clumps of trees
                 const clumpWidth = segmentLength * 1.2;
-                const treeCount = 4 + Math.floor(Math.random() * 4);
+                const treeCount = farDistance ? 2 : 3; // Fewer trees per clump for distant forests
                 
                 for (let j = 0; j < treeCount; j++) {
                     // Create a simple conifer shape (cone + cylinder)
-                    const trunkGeometry = new THREE.CylinderGeometry(1, 1.2, 3, 6);
+                    const trunkGeometry = new THREE.CylinderGeometry(1, 1.2, 3 + Math.random() * 3, detailLevel);
                     const trunkMaterial = new THREE.MeshPhongMaterial({ 
                         color: 0x3d2817, 
                         flatShading: true 
@@ -2174,7 +2207,7 @@ function createHorizonElements(regionType, startZ) {
                     const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
                     
                     const foliageHeight = 8 + Math.random() * 7;
-                    const foliageGeometry = new THREE.ConeGeometry(3 + Math.random() * 2, foliageHeight, 6);
+                    const foliageGeometry = new THREE.ConeGeometry(3 + Math.random() * 2, foliageHeight, detailLevel);
                     const foliageMaterial = new THREE.MeshPhongMaterial({ 
                         color: regions.find(r => r.name === 'Forest').horizonColor, 
                         flatShading: true 
@@ -2233,7 +2266,7 @@ function createHighwaySegment(zPosition) {
     const road = new THREE.Mesh(roadGeometry, roadMaterial);
     road.rotation.x = -Math.PI / 2;
     road.position.z = zPosition + segmentLength / 2;
-    road.position.y = 0.01; // Slightly above ground to prevent z-fighting
+    road.position.y = 0.01; // Raise the road slightly above the ground to prevent z-fighting
     road.receiveShadow = true;
     segment.add(road);
     
@@ -2242,32 +2275,23 @@ function createHighwaySegment(zPosition) {
     const shoulderMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
     const leftShoulder = new THREE.Mesh(leftShoulderGeometry, shoulderMaterial);
     leftShoulder.rotation.x = -Math.PI / 2;
-    leftShoulder.position.set(-7, 0.02, zPosition + segmentLength / 2);
+    leftShoulder.position.set(-7, 0.02, zPosition + segmentLength / 2); // Slightly higher than road
     segment.add(leftShoulder);
     
     const rightShoulderGeometry = new THREE.PlaneGeometry(2, segmentLength);
     const rightShoulder = new THREE.Mesh(rightShoulderGeometry, shoulderMaterial);
     rightShoulder.rotation.x = -Math.PI / 2;
-    rightShoulder.position.set(7, 0.02, zPosition + segmentLength / 2);
+    rightShoulder.position.set(7, 0.02, zPosition + segmentLength / 2); // Slightly higher than road
     segment.add(rightShoulder);
     
-    // Create two ground planes instead of one with an alpha map to avoid WebGL security issues
-    // Left ground plane
-    const leftGroundGeometry = new THREE.PlaneGeometry(40, segmentLength);
+    const groundGeometry = new THREE.PlaneGeometry(100, segmentLength);
     const groundMaterial = new THREE.MeshPhongMaterial({ color: regions[regionIndex].groundColor });
-    const leftGround = new THREE.Mesh(leftGroundGeometry, groundMaterial);
-    leftGround.rotation.x = -Math.PI / 2;
-    leftGround.position.set(-28, -0.02, zPosition + segmentLength / 2);
-    leftGround.receiveShadow = true;
-    segment.add(leftGround);
-    
-    // Right ground plane
-    const rightGroundGeometry = new THREE.PlaneGeometry(40, segmentLength);
-    const rightGround = new THREE.Mesh(rightGroundGeometry, groundMaterial);
-    rightGround.rotation.x = -Math.PI / 2;
-    rightGround.position.set(28, -0.02, zPosition + segmentLength / 2);
-    rightGround.receiveShadow = true;
-    segment.add(rightGround);
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.z = zPosition + segmentLength / 2;
+    ground.position.y = -0.2; // Increased difference between ground and road to prevent bleeding
+    ground.receiveShadow = true;
+    segment.add(ground);
     
     // Add horizon elements based on current region
     segment.add(createHorizonElements(regions[regionIndex].horizonType, zPosition));
@@ -2422,28 +2446,34 @@ function addEnvironmentalElements(segment, zPosition, segmentLength) {
     const hasBillboards = segmentDistanceFromStart % 200 < segmentLength || 
                          (segmentDistanceFromStart + 100) % 200 < segmentLength;
     
+    // Performance optimization - reduce environmental elements for distant segments
+    // or when the player is moving fast
+    const reduceDetail = Math.abs(zPosition) > 1000 || (speed > baseSpeed * 2);
+    
     // Add trees on both sides of the road with REDUCED density
     const isForestRegion = regions[regionIndex].name === 'Forest';
-    const treeDensity = isForestRegion ? 0.4 : 0.2; // Reduced density
     
-    // Add vegetation only on a probability basis instead of always (scaled back)
-    if (Math.random() < 0.6) { // 60% chance instead of 100%
-        // Left side
-        addVegetation(segment, -1, zPosition, segmentLength, isForestRegion, hasBillboards);
+    // Add vegetation only on a probability basis (significantly reduced)
+    if (Math.random() < (reduceDetail ? 0.15 : 0.25)) { // Reduced from 0.3/0.6 to 0.15/0.25
+        // Left side - ensure minimum distance from road
+        addVegetation(segment, -1, zPosition, segmentLength, isForestRegion, hasBillboards, reduceDetail);
         
-        // Right side
-        addVegetation(segment, 1, zPosition, segmentLength, isForestRegion, hasBillboards);
+        // Right side - ensure minimum distance from road
+        addVegetation(segment, 1, zPosition, segmentLength, isForestRegion, hasBillboards, reduceDetail);
     }
     
-    // Add additional random clusters of trees with more variety in specific regions (scaled back)
-    if (Math.random() < treeDensity && !hasBillboards) {
-        const treeCount = isForestRegion ? 2 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 2);
+    // Add additional random clusters of trees with more variety in specific regions (significantly reduced)
+    if (Math.random() < (isForestRegion ? (reduceDetail ? 0.1 : 0.15) : (reduceDetail ? 0.05 : 0.1)) && !hasBillboards) {
+        // Reduced tree count
+        const treeCount = isForestRegion ? 
+                         (reduceDetail ? 1 : 1 + Math.floor(Math.random() * 1)) : // Max 2 for forest
+                         1; // Always just 1 for other regions
         const side = Math.random() > 0.5 ? -1 : 1;
         
         for (let i = 0; i < treeCount; i++) {
             const treeGroup = createTree();
             // Place trees at varying distances from the road in clusters
-            const distanceFromRoad = 25 + Math.random() * 30; // Moved further away
+            const distanceFromRoad = 30 + Math.random() * 40; // Moved farther away (was 25+30)
             const xPos = side * distanceFromRoad;
             // Cluster trees together within the segment
             const zPos = zPosition + (segmentLength * 0.3) + Math.random() * (segmentLength * 0.4);
@@ -2455,14 +2485,14 @@ function addEnvironmentalElements(segment, zPosition, segmentLength) {
         }
     }
     
-    // Add rocks in desert region (scaled back)
-    if (regions[regionIndex].name === 'Desert' && Math.random() < 0.3) { // Reduced probability
-        const rockCount = 1 + Math.floor(Math.random() * 3); // Fewer rocks
+    // Add rocks in desert region (severely reduced)
+    if (regions[regionIndex].name === 'Desert' && Math.random() < (reduceDetail ? 0.07 : 0.15)) { // Reduced from 0.15/0.3
+        const rockCount = 1; // Always just 1 rock
         const side = Math.random() > 0.5 ? -1 : 1;
         
         for (let i = 0; i < rockCount; i++) {
             const rock = createRock();
-            const distanceFromRoad = 15 + Math.random() * 25;
+            const distanceFromRoad = 25 + Math.random() * 30; // Moved farther (was 15+25)
             const xPos = side * distanceFromRoad;
             const zPos = zPosition + Math.random() * segmentLength;
             // Vary rock sizes
@@ -2473,41 +2503,31 @@ function addEnvironmentalElements(segment, zPosition, segmentLength) {
         }
     }
     
-    // Occasional buildings (scaled back)
-    if (Math.random() < 0.08 && !hasBillboards) { // Reduced from 0.15
+    // Occasional buildings (severely reduced frequency and moved farther away)
+    if (Math.random() < (reduceDetail ? 0.01 : 0.03) && !hasBillboards) { // Reduced from 0.08
         const building = createBuilding();
         const side = Math.random() > 0.5 ? -1 : 1;
-        
-        // Road width is 16 units
-        // Ensure buildings are placed well away from the road
-        const minDistanceFromRoad = 25; // Increased from 12 to 25
-        const maxDistanceFromRoad = 45; // Increased from 40 to 45
-        
-        // Random distance within the valid range - use side to determine left/right positioning
-        const distanceFromRoad = minDistanceFromRoad + Math.random() * (maxDistanceFromRoad - minDistanceFromRoad);
-        
+        const distanceFromRoad = 50 + Math.random() * 50; // Much farther (was 35+40)
         const xPos = side * distanceFromRoad;
         const zPos = zPosition + Math.random() * segmentLength;
-        
-        // Position the building on the ground (ground is at y=-0.1)
-        building.position.set(xPos, -0.1, zPos);
+        building.position.set(xPos, 0, zPos);
         segment.add(building);
     }
     
-    // Add bushes along the roadside (scaled back)
-    if (Math.random() < 0.5) { // Only 50% of the time
-        addRoadsideBushes(segment, zPosition, segmentLength);
+    // Add bushes along the roadside (reduced)
+    if (Math.random() < (reduceDetail ? 0.15 : 0.3)) { // Reduced from 0.25/0.5
+        addRoadsideBushes(segment, zPosition, segmentLength, reduceDetail);
     }
 }
 
 // Helper function to add vegetation on a specific side
-function addVegetation(segment, side, zPosition, segmentLength, isForestRegion, hasBillboards) {
-    // Add a mix of trees and bushes along the road edge
-    const elementCount = 1 + Math.floor(Math.random() * 2); // Reduced from 2-4 to 1-2
+function addVegetation(segment, side, zPosition, segmentLength, isForestRegion, hasBillboards, reduceDetail = false) {
+    // Add a mix of trees and bushes along the road edge - reduced count
+    const elementCount = reduceDetail ? 1 : Math.ceil(Math.random() * 1); // Reduced - 1 max
     
     for (let i = 0; i < elementCount; i++) {
         // Decide whether to add a tree or bush
-        const isTree = Math.random() < 0.4; // Reduced probability of trees vs bushes
+        const isTree = Math.random() < (reduceDetail ? 0.1 : 0.2); // Reduced probability of trees vs bushes
         let element;
         
         // Skip large elements if there are billboards in this segment on this side
@@ -2518,7 +2538,8 @@ function addVegetation(segment, side, zPosition, segmentLength, isForestRegion, 
         
         if (isTree) {
             element = createTree();
-            const distanceFromRoad = 18 + Math.random() * 15; // Moved further from road
+            // Significantly increase minimum distance from road
+            const distanceFromRoad = 25 + Math.random() * 20; // Moved further from road
             const xPos = side * distanceFromRoad;
             const zPos = zPosition + (i / elementCount) * segmentLength + Math.random() * 20;
             // Randomize tree size
@@ -2527,7 +2548,8 @@ function addVegetation(segment, side, zPosition, segmentLength, isForestRegion, 
             element.position.set(xPos, 0, zPos);
         } else {
             element = createBush();
-            const distanceFromRoad = 12 + Math.random() * 8; // Moved further from road
+            // Increase minimum distance from road
+            const distanceFromRoad = 15 + Math.random() * 10; // Moved further from road
             const xPos = side * distanceFromRoad;
             const zPos = zPosition + (i / elementCount) * segmentLength + Math.random() * 20;
             element.position.set(xPos, 0, zPos);
@@ -2537,118 +2559,25 @@ function addVegetation(segment, side, zPosition, segmentLength, isForestRegion, 
     }
 }
 
-// New function to create bushes
-function createBush() {
-    const bushGroup = new THREE.Group();
-    
-    // Base color varies by region
-    let bushColor = 0x2D5E2A; // Default dark green
-    
-    if (regions[regionIndex].name === 'Desert') {
-        bushColor = 0x8D8F6F; // Desert sage color
-    } else if (regions[regionIndex].name === 'Mountains') {
-        bushColor = 0x4A6834; // Mountain shrub color
-    }
-    
-    // Create multiple foliage clumps for the bush
-    const foliageCount = 2 + Math.floor(Math.random() * 3);
-    
-    for (let i = 0; i < foliageCount; i++) {
-        const size = 0.8 + Math.random() * 1.2;
-        // Slightly vary colors
-        const colorVariation = Math.random() * 0x101010 - 0x080808;
-        const foliageColor = new THREE.Color(bushColor + colorVariation);
-        
-        const foliageGeometry = new THREE.SphereGeometry(size, 8, 6);
-        const foliageMaterial = new THREE.MeshPhongMaterial({ 
-            color: foliageColor,
-            flatShading: true 
-        });
-        
-        const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
-        
-        // Position clumps to form a bush shape
-        foliage.position.x = (Math.random() - 0.5) * 1.5;
-        foliage.position.y = size / 2 + Math.random() * 0.5;
-        foliage.position.z = (Math.random() - 0.5) * 1.5;
-        
-        bushGroup.add(foliage);
-    }
-    
-    return bushGroup;
-}
-
 // New function to add small bushes along the immediate roadside
-function addRoadsideBushes(segment, zPosition, segmentLength) {
-    // Add small bushes/grass clusters very close to the road edge
-    // Reduced from 4-8 to 2-4
-    const bushCount = 2 + Math.floor(Math.random() * 3);
+function addRoadsideBushes(segment, zPosition, segmentLength, reduceDetail = false) {
+    // Add small bushes/grass clusters very close to the road edge - reduced count
+    const bushCount = reduceDetail ? 1 : Math.ceil(Math.random() * 2); // Max 2 instead of 4
     
     for (let i = 0; i < bushCount; i++) {
         // Alternate sides
         const side = i % 2 === 0 ? -1 : 1;
         const bush = createRoadsideBush();
         
-        // Place very close to road edge
-        const distanceFromRoad = 9 + Math.random() * 2; // Moved slightly further from road
+        // Place farther from road edge
+        const distanceFromRoad = 12 + Math.random() * 3; // Moved farther from road
         const xPos = side * distanceFromRoad;
         // Spread them out more
-        const zPos = zPosition + (i / bushCount) * segmentLength + Math.random() * 15;
+        const zPos = zPosition + (i / bushCount) * segmentLength + Math.random() * 20;
         
         bush.position.set(xPos, 0, zPos);
         segment.add(bush);
     }
-}
-
-// Create small roadside vegetation
-function createRoadsideBush() {
-    const bushGroup = new THREE.Group();
-    
-    // Base color varies by region with more vibrant colors for roadside plants
-    let bushColor;
-    
-    if (regions[regionIndex].name === 'Desert') {
-        bushColor = 0xAD9F77; // Desert grass color
-    } else if (regions[regionIndex].name === 'Mountains') {
-        bushColor = 0x596C4F; // Mountain grass color
-    } else {
-        bushColor = 0x4A7535; // Default grass color
-    }
-    
-    // Create small grass/bush cluster
-    const clusterCount = 3 + Math.floor(Math.random() * 4);
-    
-    for (let i = 0; i < clusterCount; i++) {
-        // Small sizes for roadside vegetation
-        const size = 0.3 + Math.random() * 0.7;
-        
-        // Randomize colors slightly
-        const colorVariation = Math.random() * 0x151515 - 0x0A0A0A;
-        const clusterColor = new THREE.Color(bushColor + colorVariation);
-        
-        const geometry = Math.random() < 0.7 ? 
-            new THREE.ConeGeometry(size, size * 2, 5) : // Grass-like shape
-            new THREE.SphereGeometry(size, 6, 4); // Bush-like shape
-            
-        const material = new THREE.MeshPhongMaterial({ 
-            color: clusterColor,
-            flatShading: true 
-        });
-        
-        const cluster = new THREE.Mesh(geometry, material);
-        
-        // Position to form a small cluster
-        cluster.position.x = (Math.random() - 0.5) * 1.2;
-        cluster.position.y = size / 2;
-        cluster.position.z = (Math.random() - 0.5) * 1.2;
-        
-        // Randomize rotation for natural look
-        cluster.rotation.y = Math.random() * Math.PI * 2;
-        
-        bushGroup.add(cluster);
-    }
-    
-    return bushGroup;
 }
 
 // Function to create a tree
@@ -2694,6 +2623,86 @@ function createTree() {
     }
     
     return treeGroup;
+}
+
+// Function to create a bush
+function createBush() {
+    const bushGroup = new THREE.Group();
+    
+    // Bush base
+    const bushSize = 1 + Math.random() * 1.5;
+    const bushGeometry = new THREE.SphereGeometry(bushSize, 8, 6);
+    const bushColor = Math.random() > 0.3 ? 0x228B22 : 0x556B2F; // Mix of green shades
+    const bushMaterial = new THREE.MeshPhongMaterial({ color: bushColor });
+    const bush = new THREE.Mesh(bushGeometry, bushMaterial);
+    bush.position.y = bushSize * 0.8;
+    bush.scale.y = 0.8;
+    bush.castShadow = true;
+    bushGroup.add(bush);
+    
+    // Add some variation with smaller spheres
+    const clusters = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < clusters; i++) {
+        const smallSize = bushSize * (0.5 + Math.random() * 0.3);
+        const smallGeometry = new THREE.SphereGeometry(smallSize, 6, 6);
+        const smallBush = new THREE.Mesh(smallGeometry, bushMaterial);
+        
+        // Position around the main bush
+        const angle = Math.random() * Math.PI * 2;
+        const distance = bushSize * 0.6;
+        smallBush.position.x = Math.cos(angle) * distance;
+        smallBush.position.z = Math.sin(angle) * distance;
+        smallBush.position.y = bushSize * 0.7;
+        smallBush.castShadow = true;
+        bushGroup.add(smallBush);
+    }
+    
+    return bushGroup;
+}
+
+// Function to create a roadside bush (smaller, more like vegetation clusters)
+function createRoadsideBush() {
+    const bushGroup = new THREE.Group();
+    
+    // Create a cluster of small green elements
+    const clusterCount = 3 + Math.floor(Math.random() * 4);
+    
+    for (let i = 0; i < clusterCount; i++) {
+        // Randomly select geometry type - sphere or cone
+        const useSpikes = Math.random() > 0.6;
+        
+        let geometry;
+        if (useSpikes) {
+            // Grass-like spikes
+            const height = 0.3 + Math.random() * 0.5;
+            const radius = 0.1 + Math.random() * 0.2;
+            geometry = new THREE.ConeGeometry(radius, height, 5);
+        } else {
+            // Bush-like clumps
+            const size = 0.3 + Math.random() * 0.4;
+            geometry = new THREE.SphereGeometry(size, 6, 4);
+        }
+        
+        // Vary the green shades
+        const greenShade = Math.random() > 0.5 ? 0x4CAF50 : 0x689F38;
+        const material = new THREE.MeshPhongMaterial({ color: greenShade });
+        const element = new THREE.Mesh(geometry, material);
+        
+        // Position in a small cluster
+        const radius = 0.5;
+        const angle = (i / clusterCount) * Math.PI * 2 + Math.random() * 0.3;
+        element.position.x = Math.cos(angle) * radius * Math.random();
+        element.position.z = Math.sin(angle) * radius * Math.random();
+        element.position.y = useSpikes ? geometry.parameters.height / 2 : geometry.parameters.radius;
+        
+        // Add some random rotation
+        element.rotation.y = Math.random() * Math.PI * 2;
+        element.rotation.x = Math.random() * 0.2;
+        
+        bushGroup.add(element);
+    }
+    
+    return bushGroup;
 }
 
 // Function to create a rock
@@ -2952,15 +2961,55 @@ function createBillboardTexture(message) {
     // Check if the message is a string (for backward compatibility) or an object
     let messageType = 'text';
     let messageContent = message;
+    let analytics = null;
     
     if (typeof message === 'object') {
         messageType = message.type;
         messageContent = message.content;
+        analytics = message.analytics;
     }
     
     // Handle image type
     if (messageType === 'image') {
         return new Promise((resolve) => {
+            // For local billboard images, create a styled fallback text
+            if (messageContent && messageContent.includes('billboard-images')) {
+                // Extract the filename
+                const filename = messageContent.split('/').pop().split('.')[0];
+                
+                // Create styled text fallback for the image
+                context.fillStyle = '#ffffff';
+                context.font = 'bold 80px Arial';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                
+                // Add stylized text based on filename
+                if (filename === 'freight360') {
+                    context.fillText('FREIGHT 360', 512, 200);
+                    context.font = 'bold 50px Arial';
+                    context.fillText('DIGITAL FREIGHT MATCHING', 512, 300);
+                } else if (filename === 'loadpartner') {
+                    context.fillText('LOAD PARTNER', 512, 200);
+                    context.font = 'bold 50px Arial';
+                    context.fillText('CARRIER SOLUTIONS', 512, 300);
+                } else if (filename === 'wtt') {
+                    context.fillText('WHAT THE TRUCK', 512, 200);
+                    context.font = 'bold 50px Arial';
+                    context.fillText('INDUSTRY NEWS', 512, 300);
+                } else {
+                    // Generic fallback
+                    context.fillText(filename.toUpperCase(), 512, 200);
+                    context.font = 'bold 50px Arial';
+                    context.fillText('TRUCKING SERVICES', 512, 300);
+                }
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.minFilter = THREE.LinearFilter;
+                texture.generateMipmaps = false;
+                resolve(texture);
+                return;
+            }
+            
             const img = new Image();
             
             // Don't use crossOrigin for local files
@@ -3213,6 +3262,22 @@ function createBillboard(x, z, isLeftSide = true) {
     const signGeometry = new THREE.BoxGeometry(21, 10.5, 0.4); // 50% larger (from 14x7 to 21x10.5)
     const message = getWeightedRandomBillboardMessage();
     console.log("Selected billboard message:", message);
+
+    if (message.analytics) {
+        // Record analytics event for billboard impression
+        if (typeof gtag === 'function') {
+            gtag('event', 'billboard_impression', {
+                'event_category': 'game_interaction',
+                'event_label': message.analytics,
+                'non_interaction': true
+            });
+        } else if (typeof ga === 'function') {
+            // Fallback to older analytics method if gtag isn't available
+            ga('send', 'event', 'game_interaction', 'billboard_impression', message.analytics);
+        } else {
+            console.log('Analytics event (not sent):', message.analytics);
+        }
+    }
     
     // Default texture (loading texture)
     const loadingCanvas = document.createElement('canvas');
@@ -3912,6 +3977,12 @@ function initializeSegments() {
         segments.push(segment);
         lastSegmentZ = zPos;
     }
+    
+    // Initialize clouds
+    const clouds = createClouds();
+    clouds.userData = { isCloudGroup: true };
+    clouds.position.z = -400; // Position clouds in the background
+    scene.add(clouds);
 }
 
 // Add a property to store active timeouts and intervals with powerups
