@@ -325,6 +325,11 @@ function startEndlessRunnerGame() {
     
     // Get player name
     let playerName = document.getElementById('player-name').value.trim();
+
+    scene.remove(truck);
+    truck = createTruck();
+    truck.position.set(0, 1, 0); // Start in center lane at y=1 and z=0
+    scene.add(truck);
     
     // Default to a random trucker handle if left blank
     if (!playerName) {
@@ -1530,11 +1535,16 @@ window.addEventListener('load', function() {
 });
 
 // Helper functions
-function createTruck() {
+function createTruck(randomTruck = false) {
     const truckGroup = new THREE.Group();
+
+    let truckType = randomTruck ? (
+    // Randomly select one of the three truck types
+    ['flipFlopSpecial', 'oldTimer', 'strongSoloSergey'][Math.floor(Math.random() * 3)]
+    ) : selectedTruckType;
     
     // Create the cab based on selected truck type
-    switch(selectedTruckType) {
+    switch(truckType) {
         case 'flipFlopSpecial':
             createFlipFlopSpecialCab(truckGroup);
             break;
@@ -1547,9 +1557,14 @@ function createTruck() {
         default:
             createFlipFlopSpecialCab(truckGroup); // Default to Flip Flop Special
     }
+
+    let trailerType = randomTruck ? (
+        // Randomly select one of the three trailer types
+        ['dryVan', 'flatbed', 'refrigerated'][Math.floor(Math.random() * 3)]
+        ) : selectedTrailerType;
     
     // Create the trailer based on selected trailer type
-    switch(selectedTrailerType) {
+    switch(trailerType) {
         case 'dryVan':
             createDryVanTrailer(truckGroup);
             break;
@@ -1561,7 +1576,7 @@ function createTruck() {
     }
     
     // Add wheels to both cab and trailer
-    addWheels(truckGroup, selectedTruckType, selectedTrailerType);
+    addWheels(truckGroup, truckType, trailerType);
     
     truckGroup.position.y = 1;
     return truckGroup;
@@ -4900,7 +4915,7 @@ function createCrashedTruck(distance, playerName) {
     
     // Create the crashed truck using the same function that creates player trucks
     // but we'll modify it to look crashed
-    const crashedTruck = createTruck();
+    const crashedTruck = createTruck(true);
     
     // Apply damage/crash effects:
     // 1. Tilt the truck (as if it crashed off the road) - using more subtle angles
