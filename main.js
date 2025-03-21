@@ -311,58 +311,7 @@ function togglePause() {
 
 // Function to create UI elements if they don't exist
 function createGameUI() {
-    // Check if game UI already exists
-    let gameUI = document.getElementById('game-ui');
     
-    if (!gameUI) {
-        console.log("Creating game UI elements");
-        
-        // Create the main UI container
-        gameUI = document.createElement('div');
-        gameUI.id = 'game-ui';
-        gameUI.style.position = 'fixed';
-        gameUI.style.top = '10px';
-        gameUI.style.left = '10px';
-        gameUI.style.display = 'flex';
-        gameUI.style.flexDirection = 'column';
-        gameUI.style.gap = '10px';
-        gameUI.style.background = 'rgba(0, 0, 0, 0.7)';
-        gameUI.style.color = 'white';
-        gameUI.style.padding = '15px';
-        gameUI.style.borderRadius = '10px';
-        gameUI.style.zIndex = '1000';
-        gameUI.style.fontFamily = 'Arial, sans-serif';
-        document.body.appendChild(gameUI);
-        
-        // Create stat elements
-        const stats = [
-            { id: 'health', label: 'Health', value: '100' },
-            { id: 'fuel', label: 'Fuel', value: '100' },
-            { id: 'money', label: 'Money', value: '0' },
-            { id: 'distance', label: 'Distance', value: '0' },
-            { id: 'speed', label: 'Speed', value: '60' }
-        ];
-        
-        stats.forEach(stat => {
-            const statContainer = document.createElement('div');
-            statContainer.className = 'stat';
-            statContainer.style.display = 'flex';
-            statContainer.style.justifyContent = 'space-between';
-            statContainer.style.width = '200px';
-            
-            const label = document.createElement('span');
-            label.textContent = stat.label + ':';
-            label.style.fontWeight = 'bold';
-            
-            const value = document.createElement('span');
-            value.id = stat.id + '-value';
-            value.textContent = stat.value;
-            
-            statContainer.appendChild(label);
-            statContainer.appendChild(value);
-            gameUI.appendChild(statContainer);
-        });
-    }
     
     // Re-initialize UI elements after creating them
     initializeUIElements();
