@@ -379,9 +379,9 @@ function startEndlessRunnerGame() {
     placedCrashedTrucks.clear();
     
     // Sort leaderboard data by distance for easy access
-    upcomingCrashedTrucks = [...leaderboardData]
+    upcomingCrashedTrucks = [...new Set([...leaderboardData]
         .map(entry => entry.distance)
-        .filter(distance => distance > 100) // Filter out very short distances
+        .filter(distance => distance > distanceTraveled))] // Only future distances, remove duplicates
         .sort((a, b) => a - b); // Sort in ascending order
     
     // Initialize mobile controls
@@ -1337,6 +1337,7 @@ function endlessRunnerLoop() {
             lastSegmentZ = newZ;
         }
         
+        console.log(upcomingCrashedTrucks, placedCrashedTrucks, distanceTraveled);
         // Check for upcoming crashed trucks from leaderboard
         while (upcomingCrashedTrucks.length > 0 && 
                upcomingCrashedTrucks[0] <= distanceTraveled + 500 && // Look ahead 500 units
@@ -2910,55 +2911,15 @@ function createBillboardTexture(message) {
     // Check if the message is a string (for backward compatibility) or an object
     let messageType = 'text';
     let messageContent = message;
-    let analytics = null;
     
     if (typeof message === 'object') {
         messageType = message.type;
         messageContent = message.content;
-        analytics = message.analytics;
     }
     
     // Handle image type
     if (messageType === 'image') {
         return new Promise((resolve) => {
-            // For local billboard images, create a styled fallback text
-            if (messageContent && messageContent.includes('billboard-images')) {
-                // Extract the filename
-                const filename = messageContent.split('/').pop().split('.')[0];
-                
-                // Create styled text fallback for the image
-                context.fillStyle = '#ffffff';
-                context.font = 'bold 80px Arial';
-                context.textAlign = 'center';
-                context.textBaseline = 'middle';
-                
-                // Add stylized text based on filename
-                if (filename === 'freight360') {
-                    context.fillText('FREIGHT 360', 512, 200);
-                    context.font = 'bold 50px Arial';
-                    context.fillText('DIGITAL FREIGHT MATCHING', 512, 300);
-                } else if (filename === 'loadpartner') {
-                    context.fillText('LOAD PARTNER', 512, 200);
-                    context.font = 'bold 50px Arial';
-                    context.fillText('CARRIER SOLUTIONS', 512, 300);
-                } else if (filename === 'wtt') {
-                    context.fillText('WHAT THE TRUCK', 512, 200);
-                    context.font = 'bold 50px Arial';
-                    context.fillText('INDUSTRY NEWS', 512, 300);
-                } else {
-                    // Generic fallback
-                    context.fillText(filename.toUpperCase(), 512, 200);
-                    context.font = 'bold 50px Arial';
-                    context.fillText('TRUCKING SERVICES', 512, 300);
-                }
-                
-                const texture = new THREE.CanvasTexture(canvas);
-                texture.minFilter = THREE.LinearFilter;
-                texture.generateMipmaps = false;
-                resolve(texture);
-                return;
-            }
-            
             const img = new Image();
             
             // Don't use crossOrigin for local files
@@ -4908,9 +4869,9 @@ function processLeaderboardSnapshot(snapshot) {
         
         // If the game is already started, update the upcoming crashed trucks
         if (gameStarted) {
-            upcomingCrashedTrucks = [...leaderboardData]
+            upcomingCrashedTrucks = [...new Set([...leaderboardData]
                 .map(entry => entry.distance)
-                .filter(distance => distance > distanceTraveled) // Only future distances
+                .filter(distance => distance > distanceTraveled))] // Only future distances, remove duplicates
                 .sort((a, b) => a - b); // Sort in ascending order
         }
     } else {
