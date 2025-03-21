@@ -187,6 +187,8 @@ let lotLizard = null;
 let leaderboardData = [];
 let placedCrashedTrucks = new Set(); // To track which distances we've already placed crashed trucks for
 let upcomingCrashedTrucks = []; // Sorted list of upcoming distances for crashed trucks
+let lastCrashedTruckPlacementDistance = 0; // Track the distance of last placement
+let minDistanceForNextCrashedTruck = 50 + Math.floor(Math.random() * 51); // Random between 50-100
 
 // Active powerups tracking
 let activePowerups = []; // Array to track active powerups and their remaining time
@@ -377,6 +379,8 @@ function startEndlessRunnerGame() {
     
     // Reset crashed truck tracking
     placedCrashedTrucks.clear();
+    lastCrashedTruckPlacementDistance = 0;
+    minDistanceForNextCrashedTruck = 50 + Math.floor(Math.random() * 51); // Random initial value between 50-100
     
     // Sort leaderboard data by distance for easy access
     upcomingCrashedTrucks = [...new Set([...leaderboardData]
@@ -1337,13 +1341,19 @@ function endlessRunnerLoop() {
             lastSegmentZ = newZ;
         }
         
-        console.log(upcomingCrashedTrucks, placedCrashedTrucks, distanceTraveled);
         // Check for upcoming crashed trucks from leaderboard
         while (upcomingCrashedTrucks.length > 0 && 
                upcomingCrashedTrucks[0] <= distanceTraveled + 500 && // Look ahead 500 units
                !placedCrashedTrucks.has(upcomingCrashedTrucks[0])) {
             
             const distance = upcomingCrashedTrucks.shift();
+            
+            // Check if we should place this truck (random distance between 50-100 units since last placement)
+            if (distance - lastCrashedTruckPlacementDistance < minDistanceForNextCrashedTruck) {
+                // Too close to previous crashed truck, skip this one
+                placedCrashedTrucks.add(distance); // Mark as placed so we don't check it again
+                continue;
+            }
             
             // Find the entry with this distance
             const entry = leaderboardData.find(e => e.distance === distance);
@@ -1368,8 +1378,12 @@ function endlessRunnerLoop() {
                 
                 // Mark as placed
                 placedCrashedTrucks.add(distance);
+                lastCrashedTruckPlacementDistance = distance; // Update the last placement distance
                 
-                console.log(`Placed crashed truck for ${entry.playerName} at distance ${distance}m (z=${zPosition})`);
+                // Generate new random distance for next truck
+                minDistanceForNextCrashedTruck = 50 + Math.floor(Math.random() * 51); // Random between 50-100
+                
+                console.log(`Placed crashed truck for ${entry.playerName} at distance ${distance}m (z=${zPosition}), next truck in at least ${minDistanceForNextCrashedTruck}m`);
             }
         }
         
