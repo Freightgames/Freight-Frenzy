@@ -19,6 +19,7 @@ const billboardMessages = [
     { weight: 1.1, type: 'image', content: './billboard-images/freight360.png', analytics: 'freight360-billboard'},
     { weight: 1.1, type: 'image', content: './billboard-images/loadpartner.png', analytics: 'loadpartner-billboard'},
     { weight: 1.2, type: 'image', content: './billboard-images/wtt.jpg', analytics: 'whatthetruck-billboard'},
+    { weight: 1.2, type: 'image', content: './billboard-images/scrm.png', analytics: 'scrm-billboard', bgColor: "#ffffff"},
 ];
 
 // Add clock for delta time calculation
@@ -2925,7 +2926,7 @@ function createBillboardTexture(message) {
     const context = canvas.getContext('2d');
     
     // Fill with dark background for better contrast
-    context.fillStyle = '#000000';
+    context.fillStyle = message.bgColor ?? '#000000';
     context.fillRect(0, 0, 1024, 512);
     
     // Add border
