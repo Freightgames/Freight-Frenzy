@@ -1,0 +1,55 @@
+/* Interaction Styles */
+
+/* Interaction prompt */
+.interaction-prompt {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateY(50px);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  text-align: center;
+  z-index: 100;
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  border: 2px solid #D32F2F;
+  pointer-events: none;
+}
+
+.interaction-prompt.visible {
+  transform: translate(-50%, -50%);
+  opacity: 1;
+}
+
+/* Key prompt styling */
+.key-prompt {
+  display: inline-block;
+  background-color: #D32F2F;
+  color: white;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  border-radius: 5px;
+  margin: 0 5px;
+  font-weight: bold;
+  box-shadow: 0 2px 0 #B71C1C;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  .interaction-prompt {
+    font-size: 1rem;
+    padding: 10px 20px;
+  }
+  
+  .key-prompt {
+    width: 25px;
+    height: 25px;
+    line-height: 25px;
+    font-size: 0.9rem;
+  }
+} 
