@@ -10,7 +10,6 @@ document.getElementById('game').appendChild(renderer.domElement);
 const billboardMessages = [
     { weight: 1, type: 'text', content: 'HELL IS REAL' },
     { weight: 1, type: 'text', content: 'REST AREA 10 MILES' },
-    { weight: 1, type: 'text', content: 'GAS FOOD LODGING' },
     { weight: 1, type: 'text', content: 'BROKER TRANSPARENCY NOW!' },
     { weight: 1, type: 'text', content: 'Your Ad Here' },
     { weight: 1, type: 'text', content: 'Strong Solo Sergey Wanted' },
@@ -18,9 +17,10 @@ const billboardMessages = [
     { weight: 1, type: 'text', content: 'SAY NO TO CHEAP FREIGHT' },
     { weight: 1.1, type: 'image', content: './billboard-images/freight360.png', analytics: 'freight360-billboard'},
     { weight: 1.1, type: 'image', content: './billboard-images/loadpartner.png', analytics: 'loadpartner-billboard'},
-    { weight: 1.2, type: 'image', content: './billboard-images/wtt.jpg', analytics: 'whatthetruck-billboard'},
+    { weight: 1.15, type: 'image', content: './billboard-images/wtt.jpg', analytics: 'whatthetruck-billboard'},
     { weight: 1.2, type: 'image', content: './billboard-images/scrm.png', analytics: 'scrm-billboard', bgColor: "#ffffff"},
     { weight: 1.2, type: 'image', content: './billboard-images/yms.png', analytics: 'yms-billboard', bgColor: "#f9e231"},
+    { weight: 1.25, type: 'image', content: './billboard-images/ShimmiShips.jpg', analytics: 'ShimmiShips-billboard', bgColor: "#ffffff"}
 ];
 
 // Add clock for delta time calculation
