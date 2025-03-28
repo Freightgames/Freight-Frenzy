@@ -21,6 +21,7 @@ const billboardMessages = [
     { weight: 1.2, type: 'image', content: './billboard-images/wtt.jpg', analytics: 'whatthetruck-billboard'},
     { weight: 1.2, type: 'image', content: './billboard-images/scrm.png', analytics: 'scrm-billboard', bgColor: "#ffffff"},
     { weight: 1.2, type: 'image', content: './billboard-images/yms.png', analytics: 'yms-billboard', bgColor: "#f9e231"},
+    { weight: 1.2, type: 'image', content: './billboard-images/shimmi.jpg', analytics: 'shimmi-billboard'},
 ];
 
 // Add clock for delta time calculation
