@@ -1424,7 +1424,9 @@ function endlessRunnerLoop() {
         
         // Check for truck stop
         if (distanceTraveled >= nextTruckStopDistance) {
-            enterTruckstop();
+            // Instead of automatically entering the truck stop, show a prompt
+            showTruckStopPrompt();
+            // Update the next truck stop distance regardless
             nextTruckStopDistance = distanceTraveled + truckStopInterval;
         }
         
@@ -5102,4 +5104,80 @@ function getSpawnWeights() {
         powerUps: Object.fromEntries(powerUpTypes.map(p => [p.type, p.weight])),
         obstacles: Object.fromEntries(obstacleTypes.map(o => [o.type, o.weight]))
     };
+}
+
+// Add a new function to show the truck stop prompt
+function showTruckStopPrompt() {
+    // Create a prompt div if it doesn't exist
+    let truckStopPrompt = document.getElementById('truckstop-prompt');
+    if (!truckStopPrompt) {
+        truckStopPrompt = document.createElement('div');
+        truckStopPrompt.id = 'truckstop-prompt';
+        truckStopPrompt.style.position = 'fixed';
+        truckStopPrompt.style.top = '50%';
+        truckStopPrompt.style.left = '50%';
+        truckStopPrompt.style.transform = 'translate(-50%, -50%)';
+        truckStopPrompt.style.background = 'rgba(0, 0, 0, 0.8)';
+        truckStopPrompt.style.color = 'white';
+        truckStopPrompt.style.padding = '20px';
+        truckStopPrompt.style.borderRadius = '10px';
+        truckStopPrompt.style.textAlign = 'center';
+        truckStopPrompt.style.zIndex = '1000';
+        truckStopPrompt.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+        
+        const message = document.createElement('p');
+        message.textContent = 'Truck Stop Ahead!';
+        message.style.fontSize = '24px';
+        message.style.margin = '0 0 15px 0';
+        truckStopPrompt.appendChild(message);
+        
+        const description = document.createElement('p');
+        description.textContent = 'Would you like to stop for fuel and repairs?';
+        description.style.fontSize = '16px';
+        description.style.margin = '0 0 20px 0';
+        truckStopPrompt.appendChild(description);
+        
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.justifyContent = 'space-between';
+        buttonContainer.style.gap = '10px';
+        
+        const enterButton = document.createElement('button');
+        enterButton.textContent = 'Enter Truck Stop';
+        enterButton.style.padding = '10px 20px';
+        enterButton.style.background = '#4CAF50';
+        enterButton.style.color = 'white';
+        enterButton.style.border = 'none';
+        enterButton.style.borderRadius = '5px';
+        enterButton.style.cursor = 'pointer';
+        enterButton.onclick = function() {
+            document.body.removeChild(truckStopPrompt);
+            isPaused = false;
+            enterTruckstop();
+        };
+        buttonContainer.appendChild(enterButton);
+        
+        const skipButton = document.createElement('button');
+        skipButton.textContent = 'Continue Driving';
+        skipButton.style.padding = '10px 20px';
+        skipButton.style.background = '#f44336';
+        skipButton.style.color = 'white';
+        skipButton.style.border = 'none';
+        skipButton.style.borderRadius = '5px';
+        skipButton.style.cursor = 'pointer';
+        skipButton.onclick = function() {
+            document.body.removeChild(truckStopPrompt);
+            // Add a small notification that we skipped the truck stop
+            displayInGameMessage("Skipped truck stop. Next one in " + Math.floor(truckStopInterval/100) + " miles.");
+            // Resume the game
+            isPaused = false;
+        };
+        buttonContainer.appendChild(skipButton);
+        
+        truckStopPrompt.appendChild(buttonContainer);
+        document.body.appendChild(truckStopPrompt);
+        
+        // Pause the game while deciding
+        isPaused = true;
+    }
 }
