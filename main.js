@@ -5108,6 +5108,14 @@ function getSpawnWeights() {
 
 // Add a new function to show the truck stop prompt
 function showTruckStopPrompt() {
+    // Create the truck stop visually regardless of what the player chooses
+    offRamp = createOffRamp(truck.position.z - 20);
+    scene.add(offRamp);
+    
+    // Create truck stop
+    truckStop = createTruckStop(truck.position.z - 100);
+    scene.add(truckStop);
+    
     // Create a prompt div if it doesn't exist
     let truckStopPrompt = document.getElementById('truckstop-prompt');
     if (!truckStopPrompt) {
@@ -5180,4 +5188,90 @@ function showTruckStopPrompt() {
         // Pause the game while deciding
         isPaused = true;
     }
+}
+
+// Update the enterTruckstop function to not create the truck stop again since it's already created
+function enterTruckstop() {
+    console.log("Entering truckstop");
+    inTruckstop = true;
+    gameStarted = false;
+    
+    // Reset truckstop variables
+    truckstopTimer = 0;
+    lotLizardWarned = false;
+    lotLizardVisible = false;
+    
+    // The off-ramp and truck stop are already created by showTruckStopPrompt
+    // No need to create them again
+    
+    // Take control of the truck for smooth animation
+    const startPos = truck.position.clone();
+    const midPoint = new THREE.Vector3(offRamp.position.x, 1, startPos.z - 30);
+    const exitPoint = new THREE.Vector3(offRamp.position.x + 10, 1, startPos.z - 50);
+    const endPos = new THREE.Vector3(truckStop.position.x, 1, truckStop.position.z + 15);
+    
+    let progress = 0;
+    let currentSegment = 0;
+    
+    function animateToTruckstop() {
+        const delta = clock.getDelta();
+        progress += delta * 0.5;
+        
+        if (currentSegment === 0) {
+            // Segment 1: startPos to midPoint
+            if (progress < 1) {
+                truck.position.lerpVectors(startPos, midPoint, progress);
+                truck.rotation.y = 0;
+                camera.position.set(truck.position.x, 8, truck.position.z + 20);
+                camera.lookAt(truck.position.x, 3, truck.position.z - 10);
+                requestAnimationFrame(animateToTruckstop);
+            } else {
+                progress = 0;
+                currentSegment = 1;
+                requestAnimationFrame(animateToTruckstop);
+            }
+        } else if (currentSegment === 1) {
+            // Segment 2: midPoint to exitPoint (turning onto off-ramp)
+            if (progress < 1) {
+                truck.position.lerpVectors(midPoint, exitPoint, progress);
+                truck.rotation.y = Math.PI / 6 * progress; // Gradual turn
+                camera.position.set(truck.position.x - 10, 8, truck.position.z + 20);
+                camera.lookAt(truck.position.x, 3, truck.position.z - 10);
+                requestAnimationFrame(animateToTruckstop);
+            } else {
+                progress = 0;
+                currentSegment = 2;
+                requestAnimationFrame(animateToTruckstop);
+            }
+        } else if (currentSegment === 2) {
+            // Segment 3: exitPoint to truckStop (approaching parking)
+            if (progress < 1) {
+                truck.position.lerpVectors(exitPoint, endPos, progress);
+                truck.rotation.y = Math.PI / 6 + Math.PI / 6 * progress; // Continue turning
+                camera.position.x = truck.position.x - 20;
+                camera.position.y = 8;
+                camera.position.z = truck.position.z + 20;
+                camera.lookAt(truck.position);
+                requestAnimationFrame(animateToTruckstop);
+            } else {
+                truck.position.copy(endPos);
+                truck.rotation.y = Math.PI / 3; // Final rotation
+                
+                // Adjust camera for truck stop view
+                camera.position.set(truck.position.x - 20, 10, truck.position.z + 20);
+                camera.lookAt(truckStop.position);
+                
+                // Show truck stop UI
+                document.getElementById('truckstop-ui').style.display = 'block';
+                truckstopMoneyElem.textContent = Math.floor(money);
+                
+                // Reset flags for available upgrades
+                isRefueling = false;
+                
+                truckstopTimer = 0;
+            }
+        }
+    }
+    
+    animateToTruckstop();
 }
